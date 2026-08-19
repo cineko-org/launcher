@@ -374,6 +374,27 @@ func TestLauncherValidation(t *testing.T) {
 	}); err == nil {
 		t.Fatal("invalid launcher version accepted")
 	}
+	for _, endpoint := range []string{
+		"http://central.example",
+		"https://user:password@central.example",
+		"https://central.example/api",
+		"https://central.example?source=launcher",
+	} {
+		if err := validateCentralURL(endpoint); err == nil {
+			t.Fatalf("invalid Central URL %q accepted", endpoint)
+		}
+	}
+	for _, endpoint := range []string{
+		"https://central.example",
+		"https://central.example/",
+		"http://localhost:8080",
+		"http://127.0.0.1:8080",
+		"http://[::1]:8080",
+	} {
+		if err := validateCentralURL(endpoint); err != nil {
+			t.Fatalf("valid Central URL %q rejected: %v", endpoint, err)
+		}
+	}
 	if canonicalVersion(" 1.2.3 ") != "v1.2.3" || canonicalVersion("v1.2.3") != "v1.2.3" {
 		t.Fatal("canonical version mismatch")
 	}
