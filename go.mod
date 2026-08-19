@@ -8,7 +8,7 @@ require (
 	github.com/cineko-org/contracts/v3 v3.2.1
 	github.com/wailsapp/wails/v2 v2.14.0
 	golang.org/x/mod v0.40.0
-	golang.org/x/sys v0.46.0
+	golang.org/x/sys v0.47.0
 )
 
 require (
