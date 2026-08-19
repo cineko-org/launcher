@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -229,10 +230,31 @@ func validateConfig(config Config) error {
 	if strings.TrimSpace(config.CentralURL) == "" || strings.TrimSpace(config.DataDir) == "" {
 		return errors.New("central URL and launcher data directory are required")
 	}
+	if err := validateCentralURL(config.CentralURL); err != nil {
+		return err
+	}
 	if !semver.IsValid(canonicalVersion(config.Version)) {
 		return errors.New("launcher version must be semantic versioning")
 	}
 	return nil
+}
+
+func validateCentralURL(rawURL string) error {
+	endpoint, err := url.ParseRequestURI(strings.TrimSpace(rawURL))
+	if err != nil || endpoint.Host == "" || endpoint.User != nil || endpoint.RawQuery != "" || endpoint.Fragment != "" ||
+		(endpoint.Path != "" && endpoint.Path != "/") {
+		return errors.New("central URL must be an origin without credentials, path, query, or fragment")
+	}
+	if endpoint.Scheme == "https" {
+		return nil
+	}
+	hostname := strings.ToLower(endpoint.Hostname())
+	address := net.ParseIP(hostname)
+	if endpoint.Scheme == "http" && (hostname == "localhost" || strings.HasSuffix(hostname, ".localhost") ||
+		address != nil && address.IsLoopback()) {
+		return nil
+	}
+	return errors.New("central URL must use HTTPS unless it targets loopback")
 }
 
 func validateReleaseForLauncher(release central.RuntimeRelease, launcherVersion string) error {
