@@ -46,6 +46,9 @@ contract-release-check:
 
 workflow-check:
 	go run github.com/rhysd/actionlint/cmd/actionlint@$(ACTIONLINT_VERSION) .github/workflows/*.yml
+	bash -n scripts/configure-ubuntu-mirror.sh scripts/package-linux-appimage.sh scripts/register-launcher-release.sh
+	shellcheck scripts/configure-ubuntu-mirror.sh scripts/package-linux-appimage.sh scripts/register-launcher-release.sh
+	bash scripts/test-publish-launcher-release.sh
 
 frontend-check:
 	$(NPM) --prefix frontend run check
