@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+payload=""
+protocol_header=""
+url=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --data)
+      shift
+      payload="$1"
+      ;;
+    --header)
+      shift
+      if [[ "$1" == X-Cineko-Protocol:* ]]; then protocol_header="$1"; fi
+      ;;
+    --request|--retry|--retry-delay)
+      shift
+      ;;
+    --fail|--silent|--show-error|--location|--retry-all-errors)
+      ;;
+    *)
+      url="$1"
+      ;;
+  esac
+  shift
+done
+
+if [[ "$url" == */v1/release-registry/launcher ]]; then
+  if [[ "$protocol_header" != "X-Cineko-Protocol: 3" ]]; then
+    printf 'unexpected protocol header: %s\n' "$protocol_header" >&2
+    exit 1
+  fi
+  printf '%s\n' "$payload" >>"$FAKE_PAYLOADS"
+  printf '{"generation":42}\n'
+  exit 0
+fi
+
+printf 'unexpected public CDN request: %s\n' "$url" >&2
+exit 1

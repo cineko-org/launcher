@@ -1,0 +1,21 @@
+#!/bin/sh
+set -eu
+
+if [ -z "${APPDIR:-}" ]; then
+	APPDIR="$(dirname -- "$0")"
+	APPDIR="$(cd -- "$APPDIR" && pwd)"
+fi
+export APPDIR
+
+for hook in "$APPDIR"/apprun-hooks/*.sh; do
+	if [ -f "$hook" ]; then
+		# shellcheck disable=SC1090
+		. "$hook"
+	fi
+done
+
+webkit_dir="$APPDIR/usr/lib/x86_64-linux-gnu/webkit2gtk-4.1"
+export WEBKIT_EXEC_PATH="$webkit_dir"
+export WEBKIT_INJECTED_BUNDLE_PATH="$webkit_dir/injected-bundle"
+
+exec "$APPDIR/usr/bin/cineko-launcher" "$@"

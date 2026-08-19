@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+case "$1" in
+  alias)
+    exit 0
+    ;;
+  stat)
+    target="${2#cineko-release-publisher/cineko-releases/}"
+    test -f "$FAKE_OBJECT_ROOT/$target"
+    ;;
+  cat)
+    target="${2#cineko-release-publisher/cineko-releases/}"
+    command cat "$FAKE_OBJECT_ROOT/$target"
+    ;;
+  cp)
+    source_path="$3"
+    target="${4#cineko-release-publisher/cineko-releases/}"
+    mkdir -p "$(dirname "$FAKE_OBJECT_ROOT/$target")"
+    command cp "$source_path" "$FAKE_OBJECT_ROOT/$target"
+    ;;
+  *)
+    exit 2
+    ;;
+esac

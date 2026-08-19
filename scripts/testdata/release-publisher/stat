@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$1" == "-c" && "$2" == "%s" ]]; then
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    /usr/bin/stat -f '%z' "$3"
+  else
+    /usr/bin/stat -c '%s' "$3"
+  fi
+  exit 0
+fi
+
+/usr/bin/stat "$@"

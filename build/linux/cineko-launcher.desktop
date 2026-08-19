@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Cineko Launcher
+Comment=Start and update Cineko Client
+Exec=cineko-launcher
+Icon=cineko-launcher
+Terminal=false
+Categories=Utility;
