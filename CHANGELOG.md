@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.7](https://github.com/cineko-org/launcher/compare/v1.2.6...v1.2.7) (2026-08-20)
+
+
+### Bug Fixes
+
+* **release:** validate macOS signing identity ([#20](https://github.com/cineko-org/launcher/issues/20)) ([1a8c610](https://github.com/cineko-org/launcher/commit/1a8c610a8d610639760a3c284cc7d121eb744fa9))
+
 ## [1.2.6](https://github.com/cineko-org/launcher/compare/v1.2.5...v1.2.6) (2026-08-20)
 
 
