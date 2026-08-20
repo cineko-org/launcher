@@ -13,6 +13,7 @@ import (
 
 	centralstore "github.com/cineko-org/launcher/internal/centralclient"
 	"github.com/cineko-org/launcher/internal/launcher"
+	launcherartifact "github.com/cineko-org/launcher/internal/launcher/artifact"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -129,7 +130,7 @@ func (app *Launcher) DownloadLauncher() error {
 		Mode: ModeUpdating, Stage: launcher.StageDownloading, Message: "새 Launcher 다운로드 중",
 		Artifact: "launcher", Version: config.Version, Total: update.Artifact.Size,
 	})
-	if err := launcher.DownloadPortableLauncher(
+	if err := launcherartifact.DownloadPortableLauncher(
 		ctx, config.HTTPClient, filepath.Join(config.DataDir, "downloads"), update.Artifact, destination,
 		func(downloaded int64) {
 			app.publish(State{

@@ -11,6 +11,7 @@ import (
 
 	central "github.com/cineko-org/contracts/v3"
 	centralstore "github.com/cineko-org/launcher/internal/centralclient"
+	"github.com/cineko-org/launcher/internal/launcher/managedfiles"
 )
 
 var (
@@ -101,7 +102,7 @@ func resumeLauncherSession(ctx context.Context, config Config) (*centralstore.St
 }
 
 func saveLauncherSession(dataDir string, value central.AuthExchangeResponse) error {
-	return writeJSONAtomic(launcherSessionPath(dataDir), launcherSession{
+	return managedfiles.WriteJSONAtomic(launcherSessionPath(dataDir), launcherSession{
 		UserID: value.User.ID, AccessToken: value.AccessToken, ExpiresAt: value.ExpiresAt,
 		RefreshToken: value.RefreshToken, RefreshExpiresAt: value.RefreshExpiresAt,
 	})

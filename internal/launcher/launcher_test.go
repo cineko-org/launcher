@@ -24,6 +24,7 @@ import (
 	"time"
 
 	central "github.com/cineko-org/contracts/v3"
+	"github.com/cineko-org/launcher/internal/launcher/artifact"
 )
 
 func TestLauncherDownloadsVerifiesCachesAndRunsClient(t *testing.T) {
@@ -122,18 +123,18 @@ func TestLauncherDownloadsVerifiesCachesAndRunsClient(t *testing.T) {
 			Channel: "stable", Platform: runtime.GOOS, Arch: runtime.GOARCH, Version: "1.0.0",
 			MinimumLauncherVersion: "1.0.0", MinimumBrowserRevision: "1234",
 			PlaywrightVersion: "1.61.1", Protocol: central.ProtocolVersion,
-			Artifact:                 artifact(server.URL+"/client.zip", clientArchive, "client.sh"),
+			Artifact:                 releaseArtifact(server.URL+"/client.zip", clientArchive, "client.sh"),
 			ProbeBootstrapPublicKeys: map[string]string{"primary": testPublicKeyPEM(t)},
 			PublishedAt:              time.Now().UTC(),
 		},
 		Browser: central.BrowserRelease{
 			Channel: "stable", Platform: runtime.GOOS, Arch: runtime.GOARCH, Revision: "1234",
 			CompatiblePlaywrightVersions: []string{"1.61.1"},
-			Artifact:                     artifact(server.URL+"/browser.zip", browserArchive, "browser"), PublishedAt: time.Now().UTC(),
+			Artifact:                     releaseArtifact(server.URL+"/browser.zip", browserArchive, "browser"), PublishedAt: time.Now().UTC(),
 		},
 		Playwright: central.PlaywrightRelease{
 			Channel: "stable", Platform: runtime.GOOS, Arch: runtime.GOARCH, Version: "1.61.1",
-			Artifact: artifact(server.URL+"/driver.zip", driverArchive, "node"), PublishedAt: time.Now().UTC(),
+			Artifact: releaseArtifact(server.URL+"/driver.zip", driverArchive, "node"), PublishedAt: time.Now().UTC(),
 		},
 	}
 	dataDir := t.TempDir()
@@ -295,16 +296,16 @@ func TestLauncherPublishedDuringRuntimeRetryBlocksBeforeRetry(t *testing.T) {
 		Client: central.ClientRelease{
 			Channel: "stable", Platform: runtime.GOOS, Arch: runtime.GOARCH, Version: "1.0.0",
 			MinimumLauncherVersion: "1.0.0", MinimumBrowserRevision: "1", PlaywrightVersion: "1.0.0", Protocol: central.ProtocolVersion,
-			Artifact:                 artifact(server.URL+"/client.zip", clientArchive, "client"),
+			Artifact:                 releaseArtifact(server.URL+"/client.zip", clientArchive, "client"),
 			ProbeBootstrapPublicKeys: map[string]string{"primary": testPublicKeyPEM(t)}, PublishedAt: time.Now().UTC(),
 		},
 		Browser: central.BrowserRelease{
 			Channel: "stable", Platform: runtime.GOOS, Arch: runtime.GOARCH, Revision: "1",
-			CompatiblePlaywrightVersions: []string{"1.0.0"}, Artifact: artifact(server.URL+"/browser.zip", browserArchive, "browser"), PublishedAt: time.Now().UTC(),
+			CompatiblePlaywrightVersions: []string{"1.0.0"}, Artifact: releaseArtifact(server.URL+"/browser.zip", browserArchive, "browser"), PublishedAt: time.Now().UTC(),
 		},
 		Playwright: central.PlaywrightRelease{
 			Channel: "stable", Platform: runtime.GOOS, Arch: runtime.GOARCH, Version: "1.0.0",
-			Artifact: artifact(server.URL+"/driver.zip", driverArchive, "node"), PublishedAt: time.Now().UTC(),
+			Artifact: releaseArtifact(server.URL+"/driver.zip", driverArchive, "node"), PublishedAt: time.Now().UTC(),
 		},
 	}
 	err := Run(t.Context(), Config{
@@ -339,29 +340,6 @@ func testPublicKeyPEM(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der}))
-}
-
-func TestArchiveExtractionRejectsEscapesAndLinks(t *testing.T) {
-	var archive bytes.Buffer
-	writer := zip.NewWriter(&archive)
-	entry, err := writer.Create("../escape")
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, _ = entry.Write([]byte("bad"))
-	if err := writer.Close(); err != nil {
-		t.Fatal(err)
-	}
-	path := filepath.Join(t.TempDir(), "bad.zip")
-	if err := os.WriteFile(path, archive.Bytes(), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := extractZip(path, t.TempDir()); err == nil {
-		t.Fatal("escaping ZIP entry accepted")
-	}
-	if _, err := archiveTarget(t.TempDir(), "/absolute"); err == nil {
-		t.Fatal("absolute archive entry accepted")
-	}
 }
 
 func TestLauncherValidation(t *testing.T) {
@@ -407,7 +385,7 @@ func TestLauncherValidation(t *testing.T) {
 		URL:  "https://releases.example.com/cineko/client/v1.0.0/darwin-arm64/client.zip",
 		Size: 1, SHA256: strings.Repeat("a", 64), Executable: "bin/client",
 	}
-	if err := validateArtifactMetadata(validArtifact); err != nil {
+	if err := artifact.ValidateMetadata(validArtifact); err != nil {
 		t.Fatal(err)
 	}
 	for name, mutate := range map[string]func(*central.ReleaseArtifact){
@@ -420,7 +398,7 @@ func TestLauncherValidation(t *testing.T) {
 	} {
 		value := validArtifact
 		mutate(&value)
-		if err := validateArtifactMetadata(value); err == nil {
+		if err := artifact.ValidateMetadata(value); err == nil {
 			t.Fatalf("%s artifact accepted", name)
 		}
 	}
@@ -451,7 +429,7 @@ func zipArtifacts(t *testing.T, files map[string]string) []byte {
 	return archive.Bytes()
 }
 
-func artifact(url string, contents []byte, executable string) central.ReleaseArtifact {
+func releaseArtifact(url string, contents []byte, executable string) central.ReleaseArtifact {
 	digest := sha256.Sum256(contents)
 	return central.ReleaseArtifact{
 		URL: url, Size: int64(len(contents)), SHA256: hex.EncodeToString(digest[:]), Executable: executable,
