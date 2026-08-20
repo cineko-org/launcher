@@ -44,6 +44,7 @@ func prepareStartupReady(dataDir, nonce string) (string, error) {
 		}
 	}
 	if runtime.GOOS != "windows" {
+		// #nosec G302 -- directories require execute bits; 0700 remains owner-only.
 		if err := os.Chmod(directory, 0o700); err != nil {
 			return "", fmt.Errorf("secure startup directory: %w", err)
 		}
@@ -91,11 +92,11 @@ func awaitStartupReady(
 				return nil
 			}
 			if err == nil {
-				return errors.New("Cineko Client exited before startup was ready")
+				return errors.New("cineko Client exited before startup was ready")
 			}
 			return err
 		case <-timer.C:
-			return errors.New("Cineko Client startup timed out")
+			return errors.New("cineko Client startup timed out")
 		case <-ticker.C:
 			ready, err := consumeStartupMarker(path, nonce)
 			if err != nil {
@@ -115,11 +116,13 @@ func consumeStartupMarker(path, nonce string) (bool, error) {
 	}
 	if err != nil || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 ||
 		(runtime.GOOS != "windows" && info.Mode().Perm()&0o077 != 0) {
-		return false, errors.New("Client startup marker is invalid")
+		return false, errors.New("client startup marker is invalid")
 	}
+	// #nosec G304 -- path is rooted in the owner-only managed runtime directory
+	// and its nonce and file type were validated above.
 	contents, err := os.ReadFile(path)
 	if err != nil || strings.TrimSpace(string(contents)) != nonce {
-		return false, errors.New("Client startup marker is invalid")
+		return false, errors.New("client startup marker is invalid")
 	}
 	if err := os.Remove(path); err != nil {
 		return false, fmt.Errorf("remove Client startup marker: %w", err)
