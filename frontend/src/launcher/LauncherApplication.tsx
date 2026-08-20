@@ -18,6 +18,10 @@ declare global {
 
 const initialState: LauncherState = { revision: 0, mode: 'checking', message: 'Cineko 시작 준비 중', version: 'dev' };
 
+function invoke(operation: (() => Promise<void>) | undefined) {
+  if (operation) void operation().catch(() => undefined);
+}
+
 export function LauncherApplication() {
   const [state, setState] = useState<LauncherState>(initialState);
   const [pin, setPin] = useState('');
@@ -30,7 +34,7 @@ export function LauncherApplication() {
       setState((current) => (incoming.revision ?? 0) >= (current.revision ?? 0) ? incoming : current);
     };
     const unsubscribe = window.runtime?.EventsOn?.('launcher:state', applyState);
-    void bridge.State().then(applyState);
+    void bridge.State().then(applyState).catch(() => undefined);
     return unsubscribe;
   }, [bridge]);
 
@@ -41,10 +45,12 @@ export function LauncherApplication() {
     try {
       await bridge.Connect(pin);
       setPin('');
+    } catch {
+      // The Go bridge publishes the classified failure through launcher:state.
     } finally {
       setConnecting(false);
     }
   };
 
-  return <LauncherView state={state} pin={pin} connecting={connecting} onPinChange={setPin} onConnect={(event) => void connect(event)} onRetry={() => void bridge?.Retry()} onQuit={() => void bridge?.Quit()} onDownloadLauncher={() => void bridge?.DownloadLauncher()} />;
+  return <LauncherView state={state} pin={pin} connecting={connecting} onPinChange={setPin} onConnect={(event) => void connect(event)} onRetry={() => invoke(bridge?.Retry.bind(bridge))} onQuit={() => invoke(bridge?.Quit.bind(bridge))} onDownloadLauncher={() => invoke(bridge?.DownloadLauncher.bind(bridge))} />;
 }

@@ -1,4 +1,4 @@
-.PHONY: build check contract-check contract-release-check coverage desktop frontend-check install-wails lint security test workflow-check
+.PHONY: behavior-contract-check build check contract-check contract-release-check coverage desktop frontend-check install-wails lint security test workflow-check
 
 GOLANGCI_LINT_VERSION ?= v2.12.2
 GOVULNCHECK_VERSION ?= v1.6.0
@@ -53,4 +53,7 @@ workflow-check:
 frontend-check:
 	$(NPM) --prefix frontend run check
 
-check: lint security coverage test frontend-check contract-check workflow-check
+behavior-contract-check:
+	bash scripts/verify-behavior-contract.sh
+
+check: lint security coverage test frontend-check contract-check workflow-check behavior-contract-check

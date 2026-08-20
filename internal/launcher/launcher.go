@@ -202,10 +202,15 @@ func launchCurrentRuntime(
 		return rollback(errors.New("central returned an invalid launch ticket"))
 	}
 	report(config, Progress{Stage: StageLaunching, Message: "Cineko Client 시작 중"})
-	if err := runClient(ctx, config, installed, identity, ticket.LaunchTicket, generation); err != nil {
-		return rollback(err)
+	ready, err := runClient(ctx, config, installed, identity, ticket.LaunchTicket, generation, func() {
+		finalizeInstalledRelease(config.DataDir, installed)
+	})
+	if err != nil {
+		if !ready {
+			return rollback(err)
+		}
+		return err
 	}
-	finalizeInstalledRelease(config.DataDir, installed)
 	return nil
 }
 
@@ -340,8 +345,22 @@ func runClient(
 	identity identity,
 	launchTicket string,
 	releaseGeneration int64,
-) error {
-	payload, err := json.Marshal(central.ClientLaunchEnvelope{
+	onReady func(),
+) (bool, error) {
+	startupNonce, err := randomToken(24)
+	if err != nil {
+		return false, fmt.Errorf("create Client startup handshake: %w", err)
+	}
+	startupMarker, err := prepareStartupReady(config.DataDir, startupNonce)
+	if err != nil {
+		return false, fmt.Errorf("prepare Client startup handshake: %w", err)
+	}
+	defer func() { _ = os.Remove(startupMarker) }()
+	type launchPayload struct {
+		central.ClientLaunchEnvelope
+		StartupReadyNonce string `json:"startupReadyNonce"`
+	}
+	payload, err := json.Marshal(launchPayload{ClientLaunchEnvelope: central.ClientLaunchEnvelope{
 		LaunchTicket: launchTicket,
 		ClientLaunchContext: central.ClientLaunchContext{
 			InstallationID: identity.InstallationID, DeviceID: identity.DeviceID,
@@ -352,35 +371,58 @@ func runClient(
 			PlaywrightVersion:        installed.Release.Playwright.Version,
 			PlaywrightArtifactSHA256: installed.Release.Playwright.Artifact.SHA256,
 		},
-	})
+	}, StartupReadyNonce: startupNonce})
 	if err != nil {
-		return fmt.Errorf("encode client launch payload: %w", err)
+		return false, fmt.Errorf("encode client launch payload: %w", err)
 	}
-	command := exec.CommandContext(ctx, installed.ClientPath) // #nosec G204 -- path is hash-verified release metadata.
+	launchContext, cancel := context.WithCancel(ctx)
+	defer cancel()
+	command := exec.CommandContext(launchContext, installed.ClientPath) // #nosec G204 -- path is hash-verified release metadata.
 	command.Stdin = strings.NewReader(string(payload))
 	command.Stdout = defaultWriter(config.Stdout, os.Stdout)
 	command.Stderr = defaultWriter(config.Stderr, os.Stderr)
 	command.Env = append(sanitizedEnvironment(os.Environ()),
 		"CINEKO_CENTRAL_URL="+config.CentralURL,
+		"CINEKO_DATA_DIR="+config.DataDir,
 		"CINEKO_CHROME_PATH="+installed.BrowserPath,
 		"CINEKO_PLAYWRIGHT_DRIVER_PATH="+installed.DriverPath,
 		"CINEKO_PROBE_BOOTSTRAP_PUBLIC_KEYS="+installed.ProbePublicKeySpec,
 	)
 	if err := command.Start(); err != nil {
-		return fmt.Errorf("run Cineko Client: %w", err)
+		return false, fmt.Errorf("run Cineko Client: %w", err)
+	}
+	processDone := make(chan error, 1)
+	go func() { processDone <- command.Wait() }()
+	if err := awaitStartupReady(
+		ctx, startupMarker, startupNonce, processDone, clientStartupTimeout, startupCheckInterval,
+	); err != nil {
+		cancel()
+		_ = command.Process.Kill()
+		select {
+		case <-processDone:
+		case <-time.After(time.Second):
+		}
+		return false, classifyClientExit(err)
+	}
+	if onReady != nil {
+		onReady()
 	}
 	report(config, Progress{Stage: StageRunning, Message: "Cineko Client 실행 중"})
 	if config.OnClientStarted != nil {
 		config.OnClientStarted()
 	}
-	if err := command.Wait(); err != nil {
-		var exitError *exec.ExitError
-		if errors.As(err, &exitError) && exitError.ExitCode() == clientUpdateRequiredExitCode {
-			return fmt.Errorf("client detected a newer release generation: %w", centralstore.ErrReleaseChanged)
-		}
-		return fmt.Errorf("wait for Cineko Client: %w", err)
+	if err := <-processDone; err != nil {
+		return true, classifyClientExit(err)
 	}
-	return nil
+	return true, nil
+}
+
+func classifyClientExit(err error) error {
+	var exitError *exec.ExitError
+	if errors.As(err, &exitError) && exitError.ExitCode() == clientUpdateRequiredExitCode {
+		return fmt.Errorf("client detected a newer release generation: %w", centralstore.ErrReleaseChanged)
+	}
+	return fmt.Errorf("wait for Cineko Client: %w", err)
 }
 
 func compareNumericRevision(left string, right string) int {
@@ -408,6 +450,7 @@ func sanitizedEnvironment(environment []string) []string {
 	blocked := map[string]struct{}{
 		"CINEKO_CENTRAL_ACCESS_TOKEN": {},
 		"CINEKO_CENTRAL_USER_ID":      {},
+		"CINEKO_DATA_DIR":             {},
 		"CINEKO_DEV_DIRECT":           {},
 	}
 	result := make([]string, 0, len(environment))

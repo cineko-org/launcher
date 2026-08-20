@@ -33,10 +33,11 @@ var (
 )
 
 type Config struct {
-	BaseURL     string
-	UserID      string
-	AccessToken string
-	HTTPClient  *http.Client
+	BaseURL        string
+	UserID         string
+	AccessToken    string
+	HTTPClient     *http.Client
+	SessionChanged func(contracts.AuthExchangeResponse) error
 }
 
 type PINConfig struct {
@@ -45,6 +46,7 @@ type PINConfig struct {
 	InstallationID string
 	DeviceID       string
 	HTTPClient     *http.Client
+	SessionChanged func(contracts.AuthExchangeResponse) error
 }
 
 type SessionConfig struct {
@@ -55,6 +57,7 @@ type SessionConfig struct {
 	RefreshToken     string
 	RefreshExpiresAt time.Time
 	HTTPClient       *http.Client
+	SessionChanged   func(contracts.AuthExchangeResponse) error
 }
 
 type Store struct {
@@ -68,6 +71,7 @@ type Store struct {
 	expiresAt         time.Time
 	refreshToken      string
 	refreshExpiresAt  time.Time
+	sessionChanged    func(contracts.AuthExchangeResponse) error
 	releaseGeneration atomic.Int64
 }
 
@@ -76,6 +80,7 @@ func Open(ctx context.Context, config Config) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
+	store.sessionChanged = config.SessionChanged
 	if store.userID == "" || strings.TrimSpace(config.AccessToken) == "" {
 		return nil, errors.New("central user ID and access token are required")
 	}
@@ -97,6 +102,7 @@ func OpenPIN(ctx context.Context, config PINConfig) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
+	store.sessionChanged = config.SessionChanged
 	var auth contracts.AuthExchangeResponse
 	err = store.request(ctx, http.MethodPost, "/v1/auth/pin", false, contracts.ClientPINExchangeRequest{
 		PIN: config.PIN, InstallationID: config.InstallationID, DeviceID: config.DeviceID,
@@ -136,6 +142,7 @@ func Resume(config SessionConfig) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
+	store.sessionChanged = config.SessionChanged
 	if store.userID == "" || strings.TrimSpace(config.AccessToken) == "" ||
 		strings.TrimSpace(config.RefreshToken) == "" || config.ExpiresAt.IsZero() ||
 		!config.RefreshExpiresAt.After(store.clock()) {
@@ -366,6 +373,11 @@ func (store *Store) acceptSessionLocked(auth contracts.AuthExchangeResponse, now
 	if strings.TrimSpace(auth.AccessToken) == "" || strings.TrimSpace(auth.RefreshToken) == "" ||
 		auth.User.ID != store.userID || !auth.ExpiresAt.After(now) || !auth.RefreshExpiresAt.After(auth.ExpiresAt) {
 		return errors.New("invalid Central Client session")
+	}
+	if store.sessionChanged != nil {
+		if err := store.sessionChanged(auth); err != nil {
+			return fmt.Errorf("persist refreshed Central session: %w", err)
+		}
 	}
 	store.accessToken = auth.AccessToken
 	store.expiresAt = auth.ExpiresAt

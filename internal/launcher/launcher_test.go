@@ -31,7 +31,7 @@ func TestLauncherDownloadsVerifiesCachesAndRunsClient(t *testing.T) {
 		t.Skip("shell fixture is covered on macOS and Linux runners")
 	}
 	relaunchMarker := filepath.Join(t.TempDir(), "client-requested-update")
-	clientArchive := zipArtifact(t, "client.sh", fmt.Sprintf("#!/bin/sh\nif [ ! -e %q ]; then touch %q; exit 75; fi\npayload=$(cat)\n[ -z \"$CINEKO_CENTRAL_ACCESS_TOKEN\" ] || exit 21\n[ -x \"$CINEKO_CHROME_PATH\" ] || exit 22\n[ -x \"$CINEKO_PLAYWRIGHT_DRIVER_PATH\" ] || exit 23\nprintf '%%s' \"$payload\"\n", relaunchMarker, relaunchMarker))
+	clientArchive := zipArtifact(t, "client.sh", fmt.Sprintf("#!/bin/sh\nif [ ! -e %q ]; then touch %q; exit 75; fi\npayload=$(cat)\n[ -z \"$CINEKO_CENTRAL_ACCESS_TOKEN\" ] || exit 21\n[ -x \"$CINEKO_CHROME_PATH\" ] || exit 22\n[ -x \"$CINEKO_PLAYWRIGHT_DRIVER_PATH\" ] || exit 23\nnonce=$(printf '%%s' \"$payload\" | sed -n 's/.*\"startupReadyNonce\":\"\\([^\"]*\\)\".*/\\1/p')\n[ -n \"$nonce\" ] || exit 24\nprintf '%%s\\n' \"$nonce\" > \"$CINEKO_DATA_DIR/runtime/startup/$nonce.ready\"\nchmod 600 \"$CINEKO_DATA_DIR/runtime/startup/$nonce.ready\"\nprintf '%%s' \"$payload\"\n", relaunchMarker, relaunchMarker))
 	browserArchive := zipArtifact(t, "browser", "#!/bin/sh\nexit 0\n")
 	driverArchive := zipArtifacts(t, map[string]string{
 		"node": "#!/bin/sh\nexit 0\n", "package/cli.js": "#!/usr/bin/env node\n",
@@ -166,7 +166,7 @@ func TestLauncherDownloadsVerifiesCachesAndRunsClient(t *testing.T) {
 	if artifactRequests.Load() != 3 {
 		t.Fatalf("artifact requests = %d", artifactRequests.Load())
 	}
-	if clientStarts != 2 || runtimeRequests.Load() != 3 || !containsStage(progress, StageDownloading) || !containsStage(progress, StageRunning) {
+	if clientStarts != 1 || runtimeRequests.Load() != 3 || !containsStage(progress, StageDownloading) || !containsStage(progress, StageRunning) {
 		t.Fatalf("first launch progress = %+v, client starts = %d", progress, clientStarts)
 	}
 	output.Reset()
@@ -177,7 +177,7 @@ func TestLauncherDownloadsVerifiesCachesAndRunsClient(t *testing.T) {
 	if artifactRequests.Load() != 3 {
 		t.Fatalf("cached launch artifact requests = %d", artifactRequests.Load())
 	}
-	if clientStarts != 3 || containsStage(progress, StageDownloading) || !containsStage(progress, StageInstalling) {
+	if clientStarts != 2 || containsStage(progress, StageDownloading) || !containsStage(progress, StageInstalling) {
 		t.Fatalf("cached launch progress = %+v, client starts = %d", progress, clientStarts)
 	}
 	identityInfo, err := os.Stat(filepath.Join(dataDir, "installation.json"))

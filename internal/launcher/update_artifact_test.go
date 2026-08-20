@@ -198,6 +198,31 @@ func TestRuntimeRollbackRestoresPreviousManifest(t *testing.T) {
 	}
 }
 
+func TestRuntimeFinalizationRemovesPreviousComponentsImmediately(t *testing.T) {
+	dataDir := t.TempDir()
+	previous := installedFixture(t, dataDir, "a")
+	current := installedFixture(t, dataDir, "b")
+	current.Previous = &previous
+	runtimeRoot := filepath.Join(dataDir, "runtime")
+	if err := writeJSONAtomic(filepath.Join(runtimeRoot, "previous.json"), previous); err != nil {
+		t.Fatal(err)
+	}
+	finalizeInstalledRelease(dataDir, current)
+	if _, err := os.Stat(filepath.Join(runtimeRoot, "previous.json")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("previous manifest remains after readiness: %v", err)
+	}
+	for _, path := range []string{previous.ClientPath, previous.BrowserPath, previous.DriverPath} {
+		if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("previous component remains after readiness: %s (%v)", path, err)
+		}
+	}
+	for _, path := range []string{current.ClientPath, current.BrowserPath, current.DriverPath} {
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("active component removed during readiness cleanup: %s (%v)", path, err)
+		}
+	}
+}
+
 func installedFixture(t *testing.T, dataDir string, suffix string) installedRelease {
 	t.Helper()
 	digest := strings.Repeat(suffix, 64)

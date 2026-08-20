@@ -26,6 +26,8 @@ import (
 	bootstrap "github.com/cineko-org/launcher/internal/keys"
 )
 
+const defaultArtifactDownloadTimeout = 10 * time.Minute
+
 const (
 	maximumArchiveEntries        = 100_000
 	maximumArchiveFileSize       = int64(4 << 30)
@@ -60,7 +62,7 @@ func installRelease(
 	}
 	client := config.HTTPClient
 	if client == nil {
-		client = &http.Client{Timeout: 5 * time.Minute}
+		client = &http.Client{Timeout: defaultArtifactDownloadTimeout}
 	}
 	paths, err := installArtifacts(ctx, config, client, release)
 	if err != nil {
@@ -614,7 +616,7 @@ func DownloadPortableLauncher(
 		return fmt.Errorf("validate Launcher artifact: %w", err)
 	}
 	if client == nil {
-		client = &http.Client{Timeout: 5 * time.Minute}
+		client = &http.Client{Timeout: defaultArtifactDownloadTimeout}
 	}
 	cached, err := downloadArtifact(ctx, client, cacheDir, "launcher", artifact, progress)
 	if err != nil {
