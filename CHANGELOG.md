@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.5](https://github.com/cineko-org/launcher/compare/v1.2.4...v1.2.5) (2026-08-20)
+
+
+### Bug Fixes
+
+* **release:** import macOS signing identity ([#16](https://github.com/cineko-org/launcher/issues/16)) ([f3f8e6e](https://github.com/cineko-org/launcher/commit/f3f8e6ebf99bbbf2f6c7e82a27798281fa261834))
+
 ## [1.2.4](https://github.com/cineko-org/launcher/compare/v1.2.3...v1.2.4) (2026-08-20)
 
 
