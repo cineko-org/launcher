@@ -8,6 +8,7 @@ permissions:
 
 jobs:
   quality:
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -25,3 +26,13 @@ jobs:
       - run: npm ci
         working-directory: frontend
       - run: make check
+
+  release-metadata:
+    if: ${{ startsWith(github.head_ref, 'release-please--') }}
+    name: quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate generated release metadata
+        run: bash scripts/verify-release-metadata.sh
