@@ -46,12 +46,13 @@ func extractZip(archivePath string, destination string) error {
 		return err
 	}
 	defer func() { _ = reader.Close() }()
-	entries, err := inspectZip(reader.File, destination)
+	index, err := inspectZip(reader.File, destination)
 	if err != nil {
 		return err
 	}
-	for index, entry := range reader.File {
-		target, err := archiveTarget(destination, entries[index])
+	for entryIndex, entry := range reader.File {
+		name := index.entries[entryIndex]
+		target, err := archiveTarget(destination, name)
 		if err != nil {
 			return err
 		}
@@ -63,6 +64,12 @@ func extractZip(archivePath string, destination string) error {
 		}
 		if err := os.MkdirAll(filepath.Dir(target), 0o750); err != nil {
 			return err
+		}
+		if link, linked := index.symlinks[name]; linked {
+			if err := os.Symlink(filepath.FromSlash(link), target); err != nil {
+				return err
+			}
+			continue
 		}
 		source, err := entry.Open()
 		if err != nil {
@@ -84,34 +91,42 @@ func extractZip(archivePath string, destination string) error {
 	return nil
 }
 
-func inspectZip(files []*zip.File, destination string) ([]string, error) {
+type zipArchiveIndex struct {
+	entries  []string
+	types    map[string]byte
+	symlinks map[string]string
+}
+
+func inspectZip(files []*zip.File, destination string) (zipArchiveIndex, error) {
 	if len(files) > MaximumEntries {
-		return nil, errors.New("archive contains too many entries")
+		return zipArchiveIndex{}, errors.New("archive contains too many entries")
 	}
-	entries := make([]string, len(files))
-	types := make(map[string]bool, len(files))
+	index := zipArchiveIndex{
+		entries: make([]string, len(files)), types: make(map[string]byte, len(files)),
+		symlinks: make(map[string]string),
+	}
 	var expanded int64
 	var compressed int64
-	for index, entry := range files {
-		name, err := inspectZipEntry(entry, destination, types, &expanded, &compressed)
+	for entryIndex, entry := range files {
+		name, err := inspectZipEntry(entry, destination, index, &expanded, &compressed)
 		if err != nil {
-			return nil, err
+			return zipArchiveIndex{}, err
 		}
-		entries[index] = name
+		index.entries[entryIndex] = name
 	}
-	if err := validateArchiveTree(types); err != nil {
-		return nil, err
+	if err := validateZipArchiveIndex(index); err != nil {
+		return zipArchiveIndex{}, err
 	}
 	if archiveExpansionRatioExceeded(expanded, compressed) {
-		return nil, errors.New("archive expansion ratio exceeds limit")
+		return zipArchiveIndex{}, errors.New("archive expansion ratio exceeds limit")
 	}
-	return entries, nil
+	return index, nil
 }
 
 func inspectZipEntry(
 	entry *zip.File,
 	destination string,
-	types map[string]bool,
+	index zipArchiveIndex,
 	expanded *int64,
 	compressed *int64,
 ) (string, error) {
@@ -122,31 +137,87 @@ func inspectZipEntry(
 	if _, err := archiveTarget(destination, name); err != nil {
 		return "", err
 	}
-	if _, exists := types[name]; exists {
+	if _, exists := index.types[name]; exists {
 		return "", fmt.Errorf("archive contains duplicate entry %q", name)
 	}
-	if entry.Mode()&os.ModeSymlink != 0 || !entry.FileInfo().IsDir() && !entry.Mode().IsRegular() {
+	entryType, err := zipEntryType(entry)
+	if err != nil {
 		return "", fmt.Errorf("archive entry %q has unsupported type", name)
 	}
-	size, err := checkedArchiveSize(entry.UncompressedSize64)
-	if err != nil || size > MaximumFileSize {
+	size, err := accountZipEntrySize(entry, expanded, compressed)
+	if err != nil {
 		return "", fmt.Errorf("archive entry %q exceeds size limit", name)
 	}
-	if size > MaximumExpandedSize-*expanded {
-		return "", errors.New("archive expanded size exceeds limit")
+	index.types[name] = entryType
+	if entryType == tar.TypeSymlink {
+		link, err := readZipSymlink(entry, size)
+		if err != nil {
+			return "", fmt.Errorf("archive symlink %q: %w", name, err)
+		}
+		index.symlinks[name] = link
 	}
-	*expanded += size
+	return name, nil
+}
+
+func zipEntryType(entry *zip.File) (byte, error) {
+	switch {
+	case entry.FileInfo().IsDir():
+		return tar.TypeDir, nil
+	case entry.Mode()&os.ModeSymlink != 0:
+		return tar.TypeSymlink, nil
+	case entry.Mode().IsRegular():
+		return tar.TypeReg, nil
+	default:
+		return 0, errors.New("unsupported ZIP entry type")
+	}
+}
+
+func accountZipEntrySize(entry *zip.File, expanded *int64, compressed *int64) (int64, error) {
+	size, err := checkedArchiveSize(entry.UncompressedSize64)
+	if err != nil || size > MaximumFileSize || size > MaximumExpandedSize-*expanded {
+		return 0, errors.New("expanded size exceeds limit")
+	}
 	compressedSize, err := checkedArchiveSize(entry.CompressedSize64)
 	if err != nil || compressedSize > MaximumExpandedSize {
-		return "", errors.New("archive compressed size exceeds limit")
+		return 0, errors.New("compressed size exceeds limit")
 	}
+	*expanded += size
 	if compressedSize > MaximumExpandedSize-*compressed {
 		*compressed = MaximumExpandedSize
 	} else {
 		*compressed += compressedSize
 	}
-	types[name] = entry.FileInfo().IsDir()
-	return name, nil
+	return size, nil
+}
+
+func readZipSymlink(entry *zip.File, size int64) (string, error) {
+	if size <= 0 || size > 4<<10 {
+		return "", errors.New("link target size is invalid")
+	}
+	reader, err := entry.Open()
+	if err != nil {
+		return "", err
+	}
+	contents, readErr := io.ReadAll(io.LimitReader(reader, size+1))
+	closeErr := reader.Close()
+	if err := errors.Join(readErr, closeErr); err != nil {
+		return "", err
+	}
+	if int64(len(contents)) != size {
+		return "", errors.New("link target size mismatch")
+	}
+	return cleanTarLink(string(contents))
+}
+
+func validateZipArchiveIndex(index zipArchiveIndex) error {
+	types := make(map[string]bool, len(index.types))
+	for name, entryType := range index.types {
+		types[name] = entryType == tar.TypeDir
+	}
+	if err := validateArchiveTree(types); err != nil {
+		return err
+	}
+	return validateArchiveSymlinks(index.types, index.symlinks)
 }
 
 func checkedArchiveSize(size uint64) (int64, error) {
@@ -268,19 +339,23 @@ func validateTarArchiveIndex(index tarArchiveIndex) error {
 	if err := validateArchiveTree(types); err != nil {
 		return err
 	}
-	for name := range index.entries {
+	return validateArchiveSymlinks(index.entries, index.symlinks)
+}
+
+func validateArchiveSymlinks(entries map[string]byte, symlinks map[string]string) error {
+	for name := range entries {
 		for ancestor := pathpkg.Dir(name); ancestor != "."; ancestor = pathpkg.Dir(ancestor) {
-			if _, linked := index.symlinks[ancestor]; linked {
+			if _, linked := symlinks[ancestor]; linked {
 				return fmt.Errorf("archive entry %q traverses symlink %q", name, ancestor)
 			}
 		}
 	}
-	for name, link := range index.symlinks {
+	for name, link := range symlinks {
 		target := pathpkg.Clean(pathpkg.Join(pathpkg.Dir(name), link))
 		if !cleanArchiveRelativePath(target) {
 			return fmt.Errorf("archive symlink %q escapes destination", name)
 		}
-		if _, err := resolveTarSymlinks(target, index.symlinks); err != nil {
+		if _, err := resolveTarSymlinks(target, symlinks); err != nil {
 			return fmt.Errorf("archive symlink %q: %w", name, err)
 		}
 	}

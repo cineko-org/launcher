@@ -56,5 +56,5 @@ Modes are `checking`, `login`, `updating`, `launcher-update`, `launching`, and `
 
 - Go dependencies are selected by `go.mod`/`go.sum` and reproduced from committed `vendor/` metadata.
 - Frontend dependencies are selected by `frontend/package-lock.json`; embedded assets are generated from `frontend/src` during the checked build.
-- Release artifacts require HTTPS metadata, positive size, clean executable path, exact SHA-256, bounded archive expansion, and verified installed tree hashes.
+- Release artifacts require HTTPS metadata, positive size, clean executable path, exact SHA-256, bounded archive expansion, and verified installed tree hashes. ZIP and TAR may preserve relative symbolic links only when every resolved target stays inside the extracted component; absolute, escaping, cyclic, or link-parent paths fail before extraction writes files.
 - `scripts/verify-behavior-contract.sh` fails when a Launcher/Central service point or state literal appears in source without this inventory.
