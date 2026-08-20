@@ -80,7 +80,7 @@ jobs:
           npm ci --prefix frontend
       - name: Install Wails
         shell: bash
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.14.0
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.15.0
       - name: Build Launcher
         shell: bash
         run: |
