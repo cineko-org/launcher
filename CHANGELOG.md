@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/cineko-org/launcher/compare/v1.2.7...v1.3.0) (2026-08-20)
+
+
+### Features
+
+* improve responsive Launcher experience ([#22](https://github.com/cineko-org/launcher/issues/22)) ([f58a7f8](https://github.com/cineko-org/launcher/commit/f58a7f898d77d687efc5cfdc3ce3278312150ee7))
+
 ## [1.2.7](https://github.com/cineko-org/launcher/compare/v1.2.6...v1.2.7) (2026-08-20)
 
 
