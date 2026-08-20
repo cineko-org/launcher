@@ -56,5 +56,9 @@ Modes are `checking`, `login`, `updating`, `launcher-update`, `launching`, and `
 
 - Go dependencies are selected by `go.mod`/`go.sum` and reproduced from committed `vendor/` metadata.
 - Frontend dependencies are selected by `frontend/package-lock.json`; embedded assets are generated from `frontend/src` during the checked build.
+- Release Please creates a tagged draft. The release stays unpublished until every platform artifact is built and attached; failed signing, notarization, or packaging leaves only the private draft.
+- The macOS release is signed with the repository-scoped Developer ID Application identity, submitted to Apple notarization with a 10-minute timeout, stapled, and assessed before its final ZIP is created. The final ZIP is then extracted and its signature, ticket, and Gatekeeper assessment are verified again.
+- macOS signing credentials are read only from repository secrets and are imported into an ephemeral keychain. Secret values are never printed and the keychain is deleted after the job.
+- Checksums, GitHub Release upload, and Central registration consume the final stapled ZIP, never the unsigned submission bundle.
 - Release artifacts require HTTPS metadata, positive size, clean executable path, exact SHA-256, bounded archive expansion, and verified installed tree hashes. ZIP and TAR may preserve relative symbolic links only when every resolved target stays inside the extracted component; absolute, escaping, cyclic, or link-parent paths fail before extraction writes files.
 - `scripts/verify-behavior-contract.sh` fails when a Launcher/Central service point or state literal appears in source without this inventory.
