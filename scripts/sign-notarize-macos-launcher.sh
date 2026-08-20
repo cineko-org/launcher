@@ -83,10 +83,10 @@ security import "$p12_path" \
   -P "$APPLE_DEVELOPER_ID_P12_PASSWORD" \
   -T /usr/bin/codesign \
   -T /usr/bin/security >/dev/null
-security find-key -a "$keychain_path" >/dev/null 2>&1 || fail "P12 does not contain an importable private key"
 security set-key-partition-list \
   -S apple-tool:,apple:,codesign: \
   -s -k "$keychain_password" "$keychain_path" >/dev/null
+security find-key -a "$keychain_path" >/dev/null 2>&1 || fail "P12 does not contain an importable private key"
 
 identities="$(security find-identity -v -p codesigning "$keychain_path")"
 identity="$(printf '%s\n' "$identities" | sed -n 's/.*"\(Developer ID Application:.*\)"/\1/p' | head -n 1)"
