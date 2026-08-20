@@ -1,10 +1,11 @@
 //go:build windows
 
-package launcher
+package managedfiles
 
 import "golang.org/x/sys/windows"
 
-func replaceFileAtomic(source string, destination string) error {
+// ReplaceAtomic replaces destination with source using the platform's atomic operation.
+func ReplaceAtomic(source string, destination string) error {
 	sourcePointer, err := windows.UTF16PtrFromString(source)
 	if err != nil {
 		return err

@@ -1,5 +1,5 @@
 //go:build !windows
 
-package launcher
+package managedfiles
 
 func pathHasReparsePoint(string) (bool, error) { return false, nil }

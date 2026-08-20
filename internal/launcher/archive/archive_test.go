@@ -1,4 +1,4 @@
-package launcher
+package archive
 
 import (
 	"archive/tar"
@@ -18,20 +18,20 @@ func TestArchiveExpansionLimits(t *testing.T) {
 		return entry
 	}
 	if _, err := inspectZip(
-		[]*zip.File{regular("oversized", uint64(maximumArchiveFileSize)+1)}, t.TempDir(),
+		[]*zip.File{regular("oversized", uint64(MaximumFileSize)+1)}, t.TempDir(),
 	); err == nil {
 		t.Fatal("oversized archive entry accepted")
 	}
 	if _, err := inspectZip([]*zip.File{
-		regular("first", uint64(maximumArchiveFileSize)),
-		regular("second", uint64(maximumArchiveFileSize)),
-		regular("third", uint64(maximumArchiveFileSize)),
-		regular("fourth", uint64(maximumArchiveFileSize)),
+		regular("first", uint64(MaximumFileSize)),
+		regular("second", uint64(MaximumFileSize)),
+		regular("third", uint64(MaximumFileSize)),
+		regular("fourth", uint64(MaximumFileSize)),
 		regular("overflow", 1),
 	}, t.TempDir()); err == nil {
 		t.Fatal("oversized expanded archive accepted")
 	}
-	entries := make([]*zip.File, maximumArchiveEntries+1)
+	entries := make([]*zip.File, MaximumEntries+1)
 	if _, err := inspectZip(entries, t.TempDir()); err == nil {
 		t.Fatal("archive entry-count limit was not enforced")
 	}
@@ -39,6 +39,29 @@ func TestArchiveExpansionLimits(t *testing.T) {
 	ratioBomb.CompressedSize64 = uint64((maximumArchiveExpansionSlack + 1) / maximumArchiveExpansionRatio)
 	if _, err := inspectZip([]*zip.File{ratioBomb}, t.TempDir()); err == nil {
 		t.Fatal("archive expansion-ratio limit was not enforced")
+	}
+}
+
+func TestExtractRejectsEscapesAndAbsolutePaths(t *testing.T) {
+	var archive bytes.Buffer
+	writer := zip.NewWriter(&archive)
+	entry, err := writer.Create("../escape")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = entry.Write([]byte("bad"))
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "bad.zip")
+	if err := os.WriteFile(path, archive.Bytes(), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := extractZip(path, t.TempDir()); err == nil {
+		t.Fatal("escaping ZIP entry accepted")
+	}
+	if _, err := archiveTarget(t.TempDir(), "/absolute"); err == nil {
+		t.Fatal("absolute archive entry accepted")
 	}
 }
 
