@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.4](https://github.com/cineko-org/launcher/compare/v1.2.3...v1.2.4) (2026-08-20)
+
+
+### Bug Fixes
+
+* **release:** sign and notarize macOS launcher ([#14](https://github.com/cineko-org/launcher/issues/14)) ([33dbea3](https://github.com/cineko-org/launcher/commit/33dbea32de8146e38a1b0476baefc078152cb24c))
+
 ## [1.2.3](https://github.com/cineko-org/launcher/compare/v1.2.2...v1.2.3) (2026-08-20)
 
 
