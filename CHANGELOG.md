@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.6](https://github.com/cineko-org/launcher/compare/v1.2.5...v1.2.6) (2026-08-20)
+
+
+### Bug Fixes
+
+* **release:** verify imported signing key after ACL ([#18](https://github.com/cineko-org/launcher/issues/18)) ([94567e9](https://github.com/cineko-org/launcher/commit/94567e92cd431bbb232a57636cd18583bff9ba82))
+
 ## [1.2.5](https://github.com/cineko-org/launcher/compare/v1.2.4...v1.2.5) (2026-08-20)
 
 
