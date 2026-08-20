@@ -93,12 +93,19 @@ jobs:
             -platform "${{ matrix.wails_platform }}" \
             "${tags[@]}" \
             -ldflags "-s -w -X main.launcherVersion=$VERSION -X main.launcherCentralURL=$CENTRAL_URL"
-      - name: Package macOS Launcher
+      - name: Sign, notarize, and package macOS Launcher
         if: matrix.platform == 'darwin-arm64'
         shell: bash
+        env:
+          APPLE_DEVELOPER_ID_P12_BASE64: ${{ secrets.APPLE_DEVELOPER_ID_P12_BASE64 }}
+          APPLE_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_P12_PASSWORD }}
+          APPLE_NOTARY_KEY_P8_BASE64: ${{ secrets.APPLE_NOTARY_KEY_P8_BASE64 }}
+          APPLE_NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+          APPLE_NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          NOTARY_TIMEOUT: 10m
         run: |
-          mkdir -p build/release
-          ditto -c -k --sequesterRsrc --keepParent \
+          scripts/sign-notarize-macos-launcher.sh \
             'build/bin/Cineko Launcher.app' \
             "build/release/cineko-launcher-v${VERSION}-darwin-arm64.zip"
       - name: Package Windows Launcher
@@ -144,6 +151,14 @@ jobs:
           pattern: launcher-*
           path: release-assets
           merge-multiple: true
+      - name: Require an unpublished draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(gh release view '${{ needs.release.outputs.tag }}' \
+            --repo '${{ github.repository }}' \
+            --json isDraft \
+            --jq .isDraft)" = true
       - name: Create checksums
         working-directory: release-assets
         run: sha256sum cineko-launcher-* > SHA256SUMS
@@ -156,6 +171,16 @@ jobs:
           release-assets/cineko-launcher-*
           release-assets/SHA256SUMS
           --repo "${{ github.repository }}"
+          --clobber
+      - name: Publish the complete portable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release edit
+          "${{ needs.release.outputs.tag }}"
+          --repo "${{ github.repository }}"
+          --draft=false
+          --latest
       - name: Register the stable Launcher set
         env:
           CINEKO_LAUNCHER_RELEASE_BASE: https://github.com/${{ github.repository }}/releases/download/${{ needs.release.outputs.tag }}
