@@ -28,10 +28,13 @@ type launcherSession struct {
 }
 
 func authenticateLauncher(ctx context.Context, config Config, identity identity) (*centralstore.Store, error) {
+	onSessionChanged := func(session central.AuthExchangeResponse) error {
+		return saveLauncherSession(config.DataDir, session)
+	}
 	if strings.TrimSpace(config.UserID) != "" && strings.TrimSpace(config.AccessToken) != "" {
 		return centralstore.Open(ctx, centralstore.Config{
 			BaseURL: config.CentralURL, UserID: config.UserID,
-			AccessToken: config.AccessToken, HTTPClient: config.HTTPClient,
+			AccessToken: config.AccessToken, HTTPClient: config.HTTPClient, SessionChanged: onSessionChanged,
 		})
 	}
 	if store, err := resumeLauncherSession(ctx, config); err == nil {
@@ -47,7 +50,7 @@ func authenticateLauncher(ctx context.Context, config Config, identity identity)
 	store, err := centralstore.OpenPIN(ctx, centralstore.PINConfig{
 		BaseURL: config.CentralURL, PIN: pin,
 		InstallationID: identity.InstallationID, DeviceID: identity.DeviceID,
-		HTTPClient: config.HTTPClient,
+		HTTPClient: config.HTTPClient, SessionChanged: onSessionChanged,
 	})
 	if err != nil {
 		return nil, err
@@ -85,6 +88,9 @@ func resumeLauncherSession(ctx context.Context, config Config) (*centralstore.St
 		AccessToken: session.AccessToken, ExpiresAt: session.ExpiresAt,
 		RefreshToken: session.RefreshToken, RefreshExpiresAt: session.RefreshExpiresAt,
 		HTTPClient: config.HTTPClient,
+		SessionChanged: func(session central.AuthExchangeResponse) error {
+			return saveLauncherSession(config.DataDir, session)
+		},
 	})
 	if err != nil {
 		return nil, err
