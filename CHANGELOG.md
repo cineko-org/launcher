@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/cineko-org/launcher/compare/v1.2.1...v1.2.2) (2026-08-20)
+
+
+### Bug Fixes
+
+* **release:** publish hardened portable runtime ([#9](https://github.com/cineko-org/launcher/issues/9)) ([907c8fe](https://github.com/cineko-org/launcher/commit/907c8fec64e2085da08f709c96b7149671c83b20))
+
 ## [1.2.1](https://github.com/cineko-org/launcher/compare/v1.2.0...v1.2.1) (2026-08-19)
 
 
