@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.3](https://github.com/cineko-org/launcher/compare/v1.2.2...v1.2.3) (2026-08-20)
+
+
+### Bug Fixes
+
+* **ci:** validate release metadata only ([#13](https://github.com/cineko-org/launcher/issues/13)) ([0377e80](https://github.com/cineko-org/launcher/commit/0377e807f9c8d2ed6536fac74429b9b9c6a345e3))
+* **launcher:** extract Chromium framework links ([#11](https://github.com/cineko-org/launcher/issues/11)) ([24abcd4](https://github.com/cineko-org/launcher/commit/24abcd409b67b6a49797687ea34f4946c17a15c4))
+
 ## [1.2.2](https://github.com/cineko-org/launcher/compare/v1.2.1...v1.2.2) (2026-08-20)
 
 
