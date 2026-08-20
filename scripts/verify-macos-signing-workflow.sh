@@ -32,7 +32,6 @@ required_signer_text=(
   'shasum -a 256 -c -'
   "security list-keychains -d user -s \"\$keychain_path\""
   'security import'
-  "security find-key -a \"\$keychain_path\""
   '--options runtime'
   '--timestamp'
   'xcrun notarytool submit'
