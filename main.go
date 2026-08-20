@@ -50,7 +50,7 @@ func run() error {
 		Title:            "Cineko Launcher",
 		Width:            720,
 		Height:           560,
-		MinWidth:         640,
+		MinWidth:         360,
 		MinHeight:        520,
 		BackgroundColour: options.NewRGB(10, 11, 14),
 		AssetServer:      &assetserver.Options{Assets: launcher.Assets()},

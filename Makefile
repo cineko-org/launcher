@@ -1,4 +1,4 @@
-.PHONY: behavior-contract-check build check contract-check contract-release-check coverage desktop frontend-check install-wails lint security test workflow-check
+.PHONY: behavior-contract-check build check contract-check contract-release-check coverage desktop frontend-check install-wails lint security storybook storybook-build test workflow-check
 
 GOLANGCI_LINT_VERSION ?= v2.12.2
 GOVULNCHECK_VERSION ?= v1.6.0
@@ -14,8 +14,8 @@ build:
 	go build -mod=vendor -trimpath -ldflags "-s -w" -o bin/cineko-launcher .
 
 install-wails:
-	@test -x "$(WAILS)" && "$(WAILS)" version | grep -q 'v2.14.0' || \
-		go install github.com/wailsapp/wails/v2/cmd/wails@v2.14.0
+	@test -x "$(WAILS)" && "$(WAILS)" version | grep -q 'v2.15.0' || \
+		go install github.com/wailsapp/wails/v2/cmd/wails@v2.15.0
 
 desktop: install-wails
 	$(WAILS) build -clean -trimpath -m -nosyncgomod \
@@ -53,6 +53,12 @@ workflow-check:
 
 frontend-check:
 	$(NPM) --prefix frontend run check
+
+storybook:
+	$(NPM) --prefix frontend run storybook
+
+storybook-build:
+	$(NPM) --prefix frontend run storybook:build
 
 behavior-contract-check:
 	bash scripts/verify-behavior-contract.sh
