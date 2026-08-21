@@ -5,17 +5,18 @@ GOVULNCHECK_VERSION ?= v1.6.0
 ACTIONLINT_VERSION ?= v1.7.10
 GO_FILES := $(shell find . -path './vendor' -prune -o -path './frontend' -prune -o -name '*.go' -type f -print)
 NPM ?= npx --yes npm@12.0.2
-WAILS ?= $(shell go env GOPATH)/bin/wails
+GO ?= GOWORK=off go
+WAILS ?= $(shell GOWORK=off go env GOPATH)/bin/wails
 VERSION ?= $(shell cat VERSION)
 
 build:
 	$(NPM) --prefix frontend run build
 	mkdir -p bin
-	go build -mod=vendor -trimpath -ldflags "-s -w" -o bin/cineko-launcher .
+	$(GO) build -mod=vendor -trimpath -ldflags "-s -w" -o bin/cineko-launcher .
 
 install-wails:
 	@test -x "$(WAILS)" && "$(WAILS)" version | grep -q 'v2.15.0' || \
-		go install github.com/wailsapp/wails/v2/cmd/wails@v2.15.0
+		$(GO) install github.com/wailsapp/wails/v2/cmd/wails@v2.15.0
 
 desktop: install-wails
 	$(WAILS) build -clean -trimpath -m -nosyncgomod \
@@ -23,29 +24,29 @@ desktop: install-wails
 
 lint:
 	@test -z "$$(gofmt -l $(GO_FILES))" || (gofmt -l $(GO_FILES) && exit 1)
-	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run ./...
+	$(GO) run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run ./...
 
 security:
-	go run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...
+	$(GO) run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...
 	$(NPM) --prefix frontend audit --audit-level=moderate
 
 coverage:
 	bash scripts/unit-coverage.sh
 
 test:
-	go test -mod=vendor -race ./...
+	$(GO) test -mod=vendor -race ./...
 
 contract-check:
-	grep -Eq '^# github.com/cineko-org/contracts/v3 v3.3.0( => ../contracts)?$$' vendor/modules.txt
+	grep -Eq '^# github.com/cineko-org/contracts v0.0.0-20260821154125-38bf9ee32ce6$$' vendor/modules.txt
 
 contract-release-check:
 	@! grep -Eq '^[[:space:]]*replace([[:space:]]|\()' go.mod
-	@grep -Eq '^[[:space:]]*github.com/cineko-org/contracts/v3 v3.3.0$$' go.mod
-	@grep -Eq '^# github.com/cineko-org/contracts/v3 v3.3.0$$' vendor/modules.txt
-	@grep -Eq '^github.com/cineko-org/contracts/v3 v3.3.0 h1:' go.sum
+	@grep -Eq '^[[:space:]]*github.com/cineko-org/contracts v0.0.0-20260821154125-38bf9ee32ce6$$' go.mod
+	@grep -Eq '^# github.com/cineko-org/contracts v0.0.0-20260821154125-38bf9ee32ce6$$' vendor/modules.txt
+	@grep -Eq '^github.com/cineko-org/contracts v0.0.0-20260821154125-38bf9ee32ce6 h1:' go.sum
 
 workflow-check:
-	go run github.com/rhysd/actionlint/cmd/actionlint@$(ACTIONLINT_VERSION) .github/workflows/*.yml
+	$(GO) run github.com/rhysd/actionlint/cmd/actionlint@$(ACTIONLINT_VERSION) .github/workflows/*.yml
 	bash -n scripts/configure-ubuntu-mirror.sh scripts/package-linux-appimage.sh scripts/register-launcher-release.sh scripts/sign-notarize-macos-launcher.sh scripts/verify-macos-signing-workflow.sh
 	shellcheck scripts/configure-ubuntu-mirror.sh scripts/package-linux-appimage.sh scripts/register-launcher-release.sh scripts/sign-notarize-macos-launcher.sh scripts/verify-macos-signing-workflow.sh
 	bash scripts/test-publish-launcher-release.sh

@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	central "github.com/cineko-org/contracts/v3"
+	releasepb "github.com/cineko-org/contracts/gen/go/cineko/release"
 	"github.com/cineko-org/launcher/internal/launcher/managedfiles"
 )
 
@@ -25,17 +25,20 @@ const DefaultDownloadTimeout = 10 * time.Minute
 
 // ValidateMetadata checks the immutable URL, digest, size, and archive path
 // metadata received from Central before it is used by the Launcher.
-func ValidateMetadata(artifact central.ReleaseArtifact) error {
-	parsed, err := url.Parse(strings.TrimSpace(artifact.URL))
+func ValidateMetadata(artifact *releasepb.Artifact) error {
+	if artifact == nil {
+		return errors.New("artifact is required")
+	}
+	parsed, err := url.Parse(strings.TrimSpace(artifact.GetUrl()))
 	if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil || parsed.Fragment != "" ||
-		artifact.Size <= 0 {
+		artifact.GetSize() <= 0 {
 		return errors.New("HTTPS URL and positive size are required")
 	}
-	digest, err := hex.DecodeString(strings.TrimSpace(artifact.SHA256))
+	digest, err := hex.DecodeString(strings.TrimSpace(artifact.GetSha256()))
 	if err != nil || len(digest) != sha256.Size {
 		return errors.New("SHA-256 must contain 64 hexadecimal characters")
 	}
-	executable := strings.TrimSpace(artifact.Executable)
+	executable := strings.TrimSpace(artifact.GetExecutable())
 	if executable == "" || pathpkg.IsAbs(executable) || pathpkg.Clean(executable) != executable ||
 		strings.HasPrefix(executable, "../") {
 		return errors.New("executable must be a clean relative archive path")
@@ -49,7 +52,7 @@ func Download(
 	client *http.Client,
 	directory string,
 	name string,
-	artifact central.ReleaseArtifact,
+	artifact *releasepb.Artifact,
 	onProgress func(int64),
 ) (string, error) {
 	if err := os.MkdirAll(directory, 0o700); err != nil {
@@ -58,11 +61,11 @@ func Download(
 	if err := managedfiles.ValidateDirectory(filepath.Dir(directory), directory); err != nil {
 		return "", fmt.Errorf("validate artifact cache: %w", err)
 	}
-	finalPath := filepath.Join(directory, strings.ToLower(artifact.SHA256)+".blob")
+	finalPath := filepath.Join(directory, strings.ToLower(artifact.GetSha256())+".blob")
 	partialPath := finalPath + ".part"
 	if fileMatchesArtifact(finalPath, artifact) {
 		if onProgress != nil {
-			onProgress(artifact.Size)
+			onProgress(artifact.GetSize())
 		}
 		return finalPath, nil
 	}
@@ -72,11 +75,11 @@ func Download(
 			return "", fmt.Errorf("activate %s completed partial artifact: %w", name, err)
 		}
 		if onProgress != nil {
-			onProgress(artifact.Size)
+			onProgress(artifact.GetSize())
 		}
 		return finalPath, nil
 	}
-	if size, err := regularFileSize(partialPath); err != nil || size >= artifact.Size {
+	if size, err := regularFileSize(partialPath); err != nil || size >= artifact.GetSize() {
 		_ = os.RemoveAll(partialPath)
 	}
 	for attempt := 0; attempt < 2; attempt++ {
@@ -96,7 +99,7 @@ func DownloadPortableLauncher(
 	ctx context.Context,
 	client *http.Client,
 	cacheDir string,
-	artifact central.ReleaseArtifact,
+	artifact *releasepb.Artifact,
 	destination string,
 	progress func(int64),
 ) error {
@@ -113,7 +116,7 @@ func DownloadPortableLauncher(
 	return copyPortableLauncher(cached, destination, artifact)
 }
 
-func copyPortableLauncher(cached string, destination string, artifact central.ReleaseArtifact) error {
+func copyPortableLauncher(cached string, destination string, artifact *releasepb.Artifact) error {
 	destination = filepath.Clean(destination)
 	if destination == "." || destination == string(filepath.Separator) {
 		return errors.New("launcher destination is invalid")
@@ -132,7 +135,7 @@ func copyPortableLauncher(cached string, destination string, artifact central.Re
 	}
 	temporaryPath := temporary.Name()
 	defer func() { _ = os.Remove(temporaryPath) }()
-	if _, err := io.CopyN(temporary, source, artifact.Size); err != nil {
+	if _, err := io.CopyN(temporary, source, artifact.GetSize()); err != nil {
 		_ = temporary.Close()
 		return err
 	}
@@ -141,7 +144,7 @@ func copyPortableLauncher(cached string, destination string, artifact central.Re
 		return errors.New("verified Launcher artifact size changed while copying")
 	}
 	mode := os.FileMode(0o600)
-	if strings.HasSuffix(strings.ToLower(artifact.URL), ".appimage") {
+	if strings.HasSuffix(strings.ToLower(artifact.GetUrl()), ".appimage") {
 		mode = 0o700
 	}
 	if err := temporary.Chmod(mode); err != nil {
@@ -164,14 +167,14 @@ func resumeArtifactDownload(
 	partialPath string,
 	finalPath string,
 	name string,
-	artifact central.ReleaseArtifact,
+	artifact *releasepb.Artifact,
 	onProgress func(int64),
 ) (string, bool, error) {
 	offset, err := regularFileSize(partialPath)
-	if err != nil || offset > artifact.Size {
+	if err != nil || offset > artifact.GetSize() {
 		return "", true, nil
 	}
-	request, err := artifactRequest(ctx, artifact.URL, offset)
+	request, err := artifactRequest(ctx, artifact.GetUrl(), offset)
 	if err != nil {
 		return "", false, fmt.Errorf("create %s artifact request: %w", name, err)
 	}
@@ -180,7 +183,7 @@ func resumeArtifactDownload(
 		return "", false, fmt.Errorf("download %s artifact: %w", name, err)
 	}
 	defer func() { _ = response.Body.Close() }()
-	if restart, err := validateArtifactResponse(response, offset, artifact.Size); restart || err != nil {
+	if restart, err := validateArtifactResponse(response, offset, artifact.GetSize()); restart || err != nil {
 		if err != nil {
 			return "", false, fmt.Errorf("download %s artifact: %w", name, err)
 		}
@@ -199,7 +202,7 @@ func appendArtifactResponse(
 	response *http.Response,
 	partialPath string,
 	name string,
-	artifact central.ReleaseArtifact,
+	artifact *releasepb.Artifact,
 	offset int64,
 	onProgress func(int64),
 ) error {
@@ -220,15 +223,15 @@ func appendArtifactResponse(
 	if onProgress != nil {
 		onProgress(offset)
 	}
-	progress := &artifactProgressWriter{written: offset, total: artifact.Size, notify: onProgress}
+	progress := &artifactProgressWriter{written: offset, total: artifact.GetSize(), notify: onProgress}
 	written, copyErr := io.Copy(
 		io.MultiWriter(file, hasher, progress),
-		io.LimitReader(response.Body, artifact.Size-offset+1),
+		io.LimitReader(response.Body, artifact.GetSize()-offset+1),
 	)
 	if copyErr != nil {
 		return fmt.Errorf("write %s artifact: %w", name, copyErr)
 	}
-	if offset+written != artifact.Size || !strings.EqualFold(hex.EncodeToString(hasher.Sum(nil)), artifact.SHA256) {
+	if offset+written != artifact.GetSize() || !strings.EqualFold(hex.EncodeToString(hasher.Sum(nil)), artifact.GetSha256()) {
 		return fmt.Errorf("verify %s artifact: size or SHA-256 mismatch", name)
 	}
 	if err := file.Sync(); err != nil {
@@ -312,7 +315,7 @@ func regularFileSize(path string) (int64, error) {
 	return info.Size(), nil
 }
 
-func fileMatchesArtifact(path string, artifact central.ReleaseArtifact) bool {
+func fileMatchesArtifact(path string, artifact *releasepb.Artifact) bool {
 	identity, err := os.Lstat(path)
 	if err != nil || identity.Mode()&os.ModeSymlink != 0 || !identity.Mode().IsRegular() {
 		return false
@@ -323,14 +326,14 @@ func fileMatchesArtifact(path string, artifact central.ReleaseArtifact) bool {
 	}
 	defer func() { _ = file.Close() }()
 	info, err := file.Stat()
-	if err != nil || !os.SameFile(identity, info) || !info.Mode().IsRegular() || info.Size() != artifact.Size {
+	if err != nil || !os.SameFile(identity, info) || !info.Mode().IsRegular() || info.Size() != artifact.GetSize() {
 		return false
 	}
 	hasher := sha256.New()
 	if _, err := io.Copy(hasher, file); err != nil {
 		return false
 	}
-	return strings.EqualFold(hex.EncodeToString(hasher.Sum(nil)), artifact.SHA256)
+	return strings.EqualFold(hex.EncodeToString(hasher.Sum(nil)), artifact.GetSha256())
 }
 
 func validContentRange(value string, offset int64, size int64) bool {

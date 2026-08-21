@@ -1,7 +1,6 @@
 package launcher
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -9,31 +8,34 @@ import (
 	"testing"
 	"time"
 
-	central "github.com/cineko-org/contracts/v3"
+	clientpb "github.com/cineko-org/contracts/gen/go/cineko/client"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func TestLauncherAuthenticatesWithPINAndResumesSession(t *testing.T) {
 	now := time.Now().UTC()
 	exchanges := 0
 	centralServer := httptest.NewTLSServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		writer.Header().Set(central.ReleaseGenerationHeader, "11")
+		writer.Header().Set("X-Cineko-Release-Generation", "11")
 		switch request.URL.Path {
 		case "/v1/auth/pin":
 			exchanges++
-			var input central.ClientPINExchangeRequest
-			_ = json.NewDecoder(request.Body).Decode(&input)
-			if input.PIN != "123456" || input.InstallationID != "install_1234567890" ||
-				input.DeviceID != "device_123456789012" {
+			input := &clientpb.PinExchangeRequest{}
+			if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(readBody(t, request), input); err != nil {
+				t.Fatalf("decode PIN request: %v", err)
+			}
+			if input.GetPin() != "123456" || input.GetInstallationId() != "install_1234567890" ||
+				input.GetDeviceId() != "device_123456789012" {
 				writer.WriteHeader(http.StatusUnauthorized)
 				return
 			}
-			_ = json.NewEncoder(writer).Encode(central.AuthExchangeResponse{ // #nosec G117 -- test-only fixture.
-				AccessToken: "access", ExpiresAt: now.Add(time.Hour),
-				RefreshToken: "refresh", RefreshExpiresAt: now.Add(24 * time.Hour),
-				User: central.ClientUser{ID: "user"},
-			})
+			writeProtoJSON(t, writer, authenticationResponse(now, "access"))
 		case "/v1/client/bootstrap":
-			_ = json.NewEncoder(writer).Encode(central.ClientBootstrap{User: central.ClientUser{ID: "user"}})
+			bootstrap := &clientpb.Bootstrap{}
+			user := &clientpb.User{}
+			user.SetId("user")
+			bootstrap.SetUser(user)
+			writeProtoJSON(t, writer, bootstrap)
 		default:
 			http.NotFound(writer, request)
 		}
@@ -96,12 +98,12 @@ func TestLauncherRequiresValidPINWithoutSession(t *testing.T) {
 func TestLauncherChecksCentralHealthBeforeRequestingPIN(t *testing.T) {
 	healthChecks := 0
 	centralServer := httptest.NewTLSServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		writer.Header().Set(central.ReleaseGenerationHeader, "11")
+		writer.Header().Set("X-Cineko-Release-Generation", "11")
 		if request.URL.Path != "/health" {
 			t.Fatalf("unexpected request before authentication: %s", request.URL.Path)
 		}
 		healthChecks++
-		_ = json.NewEncoder(writer).Encode(map[string]string{"status": "ready"})
+		writeProtoJSON(t, writer, serviceHealthReady())
 	}))
 	t.Cleanup(centralServer.Close)
 	err := Run(t.Context(), Config{

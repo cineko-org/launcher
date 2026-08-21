@@ -18,12 +18,14 @@ import (
 	"strings"
 	"time"
 
-	central "github.com/cineko-org/contracts/v3"
+	clientpb "github.com/cineko-org/contracts/gen/go/cineko/client"
+	releasepb "github.com/cineko-org/contracts/gen/go/cineko/release"
 	centralstore "github.com/cineko-org/launcher/internal/centralclient"
 	"github.com/cineko-org/launcher/internal/launcher/artifact"
 	"github.com/cineko-org/launcher/internal/launcher/managedfiles"
 
 	"golang.org/x/mod/semver"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type Config struct {
@@ -42,7 +44,7 @@ type Config struct {
 
 type LauncherUpdateRequired struct {
 	Version  string
-	Artifact central.ReleaseArtifact
+	Artifact *releasepb.Artifact
 }
 
 func (update *LauncherUpdateRequired) Error() string {
@@ -79,13 +81,13 @@ type identity struct {
 }
 
 type installedRelease struct {
-	Release            central.RuntimeRelease `json:"release"`
-	ClientPath         string                 `json:"clientPath"`
-	BrowserPath        string                 `json:"browserPath"`
-	DriverPath         string                 `json:"driverPath"`
-	ProbePublicKeyHash string                 `json:"probePublicKeyHash"`
-	ProbePublicKeySpec string                 `json:"probePublicKeySpec"`
-	Previous           *installedRelease      `json:"-"`
+	Release            *releasepb.RuntimeRelease `json:"release"`
+	ClientPath         string                    `json:"clientPath"`
+	BrowserPath        string                    `json:"browserPath"`
+	DriverPath         string                    `json:"driverPath"`
+	ProbePublicKeyHash string                    `json:"probePublicKeyHash"`
+	ProbePublicKeySpec string                    `json:"probePublicKeySpec"`
+	Previous           *installedRelease         `json:"-"`
 }
 
 func Run(ctx context.Context, config Config) error {
@@ -126,10 +128,13 @@ func prepareLauncher(
 	if err != nil {
 		return identity, nil, err
 	}
-	if _, err := store.RegisterDevice(ctx, central.ClientDevice{
-		InstallationID: identity.InstallationID, DeviceID: identity.DeviceID,
-		Platform: runtime.GOOS, Arch: runtime.GOARCH, AppVersion: "launcher/" + config.Version,
-	}); err != nil {
+	device := &clientpb.Device{}
+	device.SetInstallationId(identity.InstallationID)
+	device.SetDeviceId(identity.DeviceID)
+	device.SetPlatform(runtime.GOOS)
+	device.SetArchitecture(runtime.GOARCH)
+	device.SetAppVersion("launcher/" + config.Version)
+	if _, err := store.RegisterDevice(ctx, device); err != nil {
 		_ = store.Close()
 		return identity, nil, fmt.Errorf("register launcher device: %w", err)
 	}
@@ -148,8 +153,8 @@ func ensureLauncherCurrent(ctx context.Context, config Config, store *centralsto
 	if err := validateLauncherRelease(launcherRelease); err != nil {
 		return err
 	}
-	if semver.Compare(canonicalVersion(launcherRelease.Version), canonicalVersion(config.Version)) > 0 {
-		return &LauncherUpdateRequired{Version: launcherRelease.Version, Artifact: launcherRelease.Launcher}
+	if semver.Compare(canonicalVersion(launcherRelease.GetVersion()), canonicalVersion(config.Version)) > 0 {
+		return &LauncherUpdateRequired{Version: launcherRelease.GetVersion(), Artifact: launcherRelease.GetLauncher()}
 	}
 	return nil
 }
@@ -186,22 +191,28 @@ func launchCurrentRuntime(
 	if generation <= 0 {
 		return rollback(errors.New("central returned no active release generation"))
 	}
-	ticket, err := store.IssueLaunchTicket(ctx, central.LaunchTicketRequest{
-		InstallationID: identity.InstallationID, DeviceID: identity.DeviceID, ReleaseGeneration: generation,
-		ClientVersion: release.Client.Version, ArtifactSHA256: release.Client.Artifact.SHA256,
-		Protocol: release.Client.Protocol, BrowserRevision: release.Browser.Revision,
-		BrowserArtifactSHA256: release.Browser.Artifact.SHA256,
-		PlaywrightVersion:     release.Playwright.Version, PlaywrightArtifactSHA256: release.Playwright.Artifact.SHA256,
-		Nonce: nonce,
-	})
+	launchContext := &clientpb.LaunchContext{}
+	launchContext.SetInstallationId(identity.InstallationID)
+	launchContext.SetDeviceId(identity.DeviceID)
+	launchContext.SetReleaseGeneration(generation)
+	launchContext.SetClientVersion(release.GetClient().GetVersion())
+	launchContext.SetArtifactSha256(release.GetClient().GetArtifact().GetSha256())
+	launchContext.SetBrowserRevision(release.GetBrowser().GetRevision())
+	launchContext.SetBrowserArtifactSha256(release.GetBrowser().GetArtifact().GetSha256())
+	launchContext.SetPlaywrightVersion(release.GetPlaywright().GetVersion())
+	launchContext.SetPlaywrightArtifactSha256(release.GetPlaywright().GetArtifact().GetSha256())
+	ticketRequest := &clientpb.LaunchTicketRequest{}
+	ticketRequest.SetContext(launchContext)
+	ticketRequest.SetNonce(nonce)
+	ticket, err := store.IssueLaunchTicket(ctx, ticketRequest)
 	if err != nil {
 		return rollback(fmt.Errorf("issue client launch ticket: %w", err))
 	}
-	if !ticket.ExpiresAt.After(time.Now()) || ticket.LaunchTicket == "" {
+	if ticket.GetExpiresAt() == nil || !ticket.GetExpiresAt().AsTime().After(time.Now()) || ticket.GetLaunchTicket() == "" {
 		return rollback(errors.New("central returned an invalid launch ticket"))
 	}
 	report(config, Progress{Stage: StageLaunching, Message: "Cineko Client 시작 중"})
-	ready, err := runClient(ctx, config, installed, identity, ticket.LaunchTicket, generation, func() {
+	ready, err := runClient(ctx, config, installed, identity, ticket.GetLaunchTicket(), generation, func() {
 		finalizeInstalledRelease(config.DataDir, installed)
 	})
 	if err != nil {
@@ -213,12 +224,12 @@ func launchCurrentRuntime(
 	return nil
 }
 
-func validateLauncherRelease(release central.LauncherRelease) error {
-	if release.Channel != "stable" || release.Platform != runtime.GOOS || release.Arch != runtime.GOARCH ||
-		release.Protocol != central.ProtocolVersion || !semver.IsValid(canonicalVersion(release.Version)) {
+func validateLauncherRelease(release *releasepb.LauncherRelease) error {
+	if release == nil || release.GetChannel() != "stable" || release.GetPlatform() != runtime.GOOS ||
+		release.GetArchitecture() != runtime.GOARCH || !semver.IsValid(canonicalVersion(release.GetVersion())) {
 		return errors.New("release is incompatible with this launcher")
 	}
-	if err := artifact.ValidateMetadata(release.Launcher); err != nil {
+	if err := artifact.ValidateMetadata(release.GetLauncher()); err != nil {
 		return fmt.Errorf("launcher download: %w", err)
 	}
 	return nil
@@ -261,13 +272,16 @@ func validateCentralURL(rawURL string) error {
 	return errors.New("central URL must use HTTPS unless it targets loopback")
 }
 
-func validateReleaseForLauncher(release central.RuntimeRelease, launcherVersion string) error {
-	client := release.Client
-	if client.Channel != "stable" || release.Browser.Channel != "stable" || release.Playwright.Channel != "stable" ||
-		client.Platform != runtime.GOOS || client.Arch != runtime.GOARCH ||
-		release.Browser.Platform != runtime.GOOS || release.Browser.Arch != runtime.GOARCH ||
-		release.Playwright.Platform != runtime.GOOS || release.Playwright.Arch != runtime.GOARCH ||
-		client.Protocol != central.ProtocolVersion {
+//nolint:gocyclo,cyclop // Runtime compatibility keeps every generated release component invariant explicit.
+func validateReleaseForLauncher(release *releasepb.RuntimeRelease, launcherVersion string) error {
+	client := release.GetClient()
+	browser := release.GetBrowser()
+	playwright := release.GetPlaywright()
+	if release == nil || client == nil || browser == nil || playwright == nil ||
+		client.GetChannel() != "stable" || browser.GetChannel() != "stable" || playwright.GetChannel() != "stable" ||
+		client.GetPlatform() != runtime.GOOS || client.GetArchitecture() != runtime.GOARCH ||
+		browser.GetPlatform() != runtime.GOOS || browser.GetArchitecture() != runtime.GOARCH ||
+		playwright.GetPlatform() != runtime.GOOS || playwright.GetArchitecture() != runtime.GOARCH {
 		return errors.New("release is incompatible with this launcher")
 	}
 	if err := validateRuntimeCompatibility(release, launcherVersion); err != nil {
@@ -275,11 +289,11 @@ func validateReleaseForLauncher(release central.RuntimeRelease, launcherVersion 
 	}
 	for _, component := range []struct {
 		name     string
-		artifact central.ReleaseArtifact
+		artifact *releasepb.Artifact
 	}{
-		{name: "client", artifact: release.Client.Artifact},
-		{name: "browser", artifact: release.Browser.Artifact},
-		{name: "playwright", artifact: release.Playwright.Artifact},
+		{name: "client", artifact: client.GetArtifact()},
+		{name: "browser", artifact: browser.GetArtifact()},
+		{name: "playwright", artifact: playwright.GetArtifact()},
 	} {
 		if err := artifact.ValidateMetadata(component.artifact); err != nil {
 			return fmt.Errorf("%s artifact: %w", component.name, err)
@@ -288,19 +302,19 @@ func validateReleaseForLauncher(release central.RuntimeRelease, launcherVersion 
 	return nil
 }
 
-func validateRuntimeCompatibility(release central.RuntimeRelease, launcherVersion string) error {
-	client := release.Client
-	minimum := canonicalVersion(client.MinimumLauncherVersion)
+func validateRuntimeCompatibility(release *releasepb.RuntimeRelease, launcherVersion string) error {
+	client := release.GetClient()
+	minimum := canonicalVersion(client.GetMinimumLauncherVersion())
 	if !semver.IsValid(minimum) || semver.Compare(canonicalVersion(launcherVersion), minimum) < 0 {
-		return fmt.Errorf("launcher %s is older than required %s", launcherVersion, client.MinimumLauncherVersion)
+		return fmt.Errorf("launcher %s is older than required %s", launcherVersion, client.GetMinimumLauncherVersion())
 	}
-	if !semver.IsValid(canonicalVersion(client.Version)) ||
-		!semver.IsValid(canonicalVersion(release.Playwright.Version)) ||
-		!validNumericRevision(release.Browser.Revision) ||
-		!validNumericRevision(client.MinimumBrowserRevision) ||
-		client.PlaywrightVersion != release.Playwright.Version ||
-		compareNumericRevision(release.Browser.Revision, client.MinimumBrowserRevision) < 0 ||
-		!containsString(release.Browser.CompatiblePlaywrightVersions, release.Playwright.Version) {
+	if !semver.IsValid(canonicalVersion(client.GetVersion())) ||
+		!semver.IsValid(canonicalVersion(release.GetPlaywright().GetVersion())) ||
+		!validNumericRevision(release.GetBrowser().GetRevision()) ||
+		!validNumericRevision(client.GetMinimumBrowserRevision()) ||
+		client.GetPlaywrightVersion() != release.GetPlaywright().GetVersion() ||
+		compareNumericRevision(release.GetBrowser().GetRevision(), client.GetMinimumBrowserRevision()) < 0 ||
+		!containsString(release.GetBrowser().GetCompatiblePlaywrightVersions(), release.GetPlaywright().GetVersion()) {
 		return errors.New("release client version is invalid")
 	}
 	return nil
@@ -337,34 +351,33 @@ func runClient(
 		return false, fmt.Errorf("prepare Client startup handshake: %w", err)
 	}
 	defer func() { _ = os.Remove(startupMarker) }()
-	type launchPayload struct {
-		central.ClientLaunchEnvelope
-		StartupReadyNonce string `json:"startupReadyNonce"`
-	}
-	payload, err := json.Marshal(launchPayload{ClientLaunchEnvelope: central.ClientLaunchEnvelope{
-		LaunchTicket: launchTicket,
-		ClientLaunchContext: central.ClientLaunchContext{
-			InstallationID: identity.InstallationID, DeviceID: identity.DeviceID,
-			ReleaseGeneration: releaseGeneration,
-			ClientVersion:     installed.Release.Client.Version, ArtifactSHA256: installed.Release.Client.Artifact.SHA256,
-			Protocol: installed.Release.Client.Protocol, BrowserRevision: installed.Release.Browser.Revision,
-			BrowserArtifactSHA256:    installed.Release.Browser.Artifact.SHA256,
-			PlaywrightVersion:        installed.Release.Playwright.Version,
-			PlaywrightArtifactSHA256: installed.Release.Playwright.Artifact.SHA256,
-		},
-	}, StartupReadyNonce: startupNonce})
+	launchContext := &clientpb.LaunchContext{}
+	launchContext.SetInstallationId(identity.InstallationID)
+	launchContext.SetDeviceId(identity.DeviceID)
+	launchContext.SetReleaseGeneration(releaseGeneration)
+	launchContext.SetClientVersion(installed.Release.GetClient().GetVersion())
+	launchContext.SetArtifactSha256(installed.Release.GetClient().GetArtifact().GetSha256())
+	launchContext.SetBrowserRevision(installed.Release.GetBrowser().GetRevision())
+	launchContext.SetBrowserArtifactSha256(installed.Release.GetBrowser().GetArtifact().GetSha256())
+	launchContext.SetPlaywrightVersion(installed.Release.GetPlaywright().GetVersion())
+	launchContext.SetPlaywrightArtifactSha256(installed.Release.GetPlaywright().GetArtifact().GetSha256())
+	envelope := &clientpb.LaunchEnvelope{}
+	envelope.SetLaunchTicket(launchTicket)
+	envelope.SetContext(launchContext)
+	payload, err := protojson.MarshalOptions{UseProtoNames: false}.Marshal(envelope)
 	if err != nil {
 		return false, fmt.Errorf("encode client launch payload: %w", err)
 	}
-	launchContext, cancel := context.WithCancel(ctx)
+	processContext, cancel := context.WithCancel(ctx)
 	defer cancel()
-	command := exec.CommandContext(launchContext, installed.ClientPath) // #nosec G204 -- path is hash-verified release metadata.
+	command := exec.CommandContext(processContext, installed.ClientPath) // #nosec G204 -- path is hash-verified release metadata.
 	command.Stdin = strings.NewReader(string(payload))
 	command.Stdout = defaultWriter(config.Stdout, os.Stdout)
 	command.Stderr = defaultWriter(config.Stderr, os.Stderr)
 	command.Env = append(sanitizedEnvironment(os.Environ()),
 		"CINEKO_CENTRAL_URL="+config.CentralURL,
 		"CINEKO_DATA_DIR="+config.DataDir,
+		"CINEKO_STARTUP_READY_NONCE="+startupNonce,
 		"CINEKO_CHROME_PATH="+installed.BrowserPath,
 		"CINEKO_PLAYWRIGHT_DRIVER_PATH="+installed.DriverPath,
 		"CINEKO_PROBE_BOOTSTRAP_PUBLIC_KEYS="+installed.ProbePublicKeySpec,

@@ -1,7 +1,6 @@
 package centralclient
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -9,26 +8,31 @@ import (
 	"testing"
 	"time"
 
-	contracts "github.com/cineko-org/contracts/v3"
+	clientpb "github.com/cineko-org/contracts/gen/go/cineko/client"
+	commonpb "github.com/cineko-org/contracts/gen/go/cineko/common"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestResumedSessionPersistsRotatedRefreshToken(t *testing.T) {
 	t.Parallel()
 	now := time.Now().UTC()
-	var persisted contracts.AuthExchangeResponse
+	var persisted *clientpb.AuthenticationResponse
 	server := httptest.NewTLSServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		releaseGeneration(writer, "7")
 		switch request.URL.Path {
 		case "/v1/auth/refresh":
-			_ = json.NewEncoder(writer).Encode(contracts.AuthExchangeResponse{ // #nosec G117 -- test fixture.
-				AccessToken: "new-access", ExpiresAt: now.Add(time.Hour), RefreshToken: "new-refresh",
-				RefreshExpiresAt: now.Add(24 * time.Hour), User: contracts.ClientUser{ID: "user"},
-			})
+			writeProtoJSON(t, writer, authenticationResponse(now, "new-access", "new-refresh"))
 		case "/v1/client/bootstrap":
 			if request.Header.Get("Authorization") != "Bearer new-access" {
 				t.Errorf("bootstrap authorization = %q", request.Header.Get("Authorization"))
 			}
-			_ = json.NewEncoder(writer).Encode(contracts.ClientBootstrap{User: contracts.ClientUser{ID: "user"}})
+			bootstrap := &clientpb.Bootstrap{}
+			user := &clientpb.User{}
+			user.SetId("user")
+			bootstrap.SetUser(user)
+			writeProtoJSON(t, writer, bootstrap)
 		default:
 			http.NotFound(writer, request)
 		}
@@ -37,7 +41,7 @@ func TestResumedSessionPersistsRotatedRefreshToken(t *testing.T) {
 	store, err := Resume(SessionConfig{
 		BaseURL: server.URL, UserID: "user", AccessToken: "expired", ExpiresAt: now.Add(-time.Minute),
 		RefreshToken: "old-refresh", RefreshExpiresAt: now.Add(time.Hour), HTTPClient: server.Client(),
-		SessionChanged: func(session contracts.AuthExchangeResponse) error { persisted = session; return nil },
+		SessionChanged: func(session *clientpb.AuthenticationResponse) error { persisted = session; return nil },
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -45,7 +49,7 @@ func TestResumedSessionPersistsRotatedRefreshToken(t *testing.T) {
 	if err := store.ValidateSession(t.Context()); err != nil {
 		t.Fatal(err)
 	}
-	if persisted.RefreshToken != "new-refresh" || store.Session().RefreshToken != "new-refresh" {
+	if persisted.GetRefreshToken() != "new-refresh" || store.Session().GetRefreshToken() != "new-refresh" {
 		t.Fatalf("rotated session was not persisted: callback=%+v store=%+v", persisted, store.Session())
 	}
 }
@@ -58,10 +62,7 @@ func TestRefreshPersistenceFailureKeepsPreviousSessionAndStopsRequest(t *testing
 		releaseGeneration(writer, "7")
 		switch request.URL.Path {
 		case "/v1/auth/refresh":
-			_ = json.NewEncoder(writer).Encode(contracts.AuthExchangeResponse{ // #nosec G117 -- test fixture.
-				AccessToken: "new-access", ExpiresAt: now.Add(time.Hour), RefreshToken: "new-refresh",
-				RefreshExpiresAt: now.Add(24 * time.Hour), User: contracts.ClientUser{ID: "user"},
-			})
+			writeProtoJSON(t, writer, authenticationResponse(now, "new-access", "new-refresh"))
 		case "/v1/client/bootstrap":
 			bootstrapCalls.Add(1)
 		default:
@@ -72,7 +73,7 @@ func TestRefreshPersistenceFailureKeepsPreviousSessionAndStopsRequest(t *testing
 	store, err := Resume(SessionConfig{
 		BaseURL: server.URL, UserID: "user", AccessToken: "old-access", ExpiresAt: now.Add(-time.Minute),
 		RefreshToken: "old-refresh", RefreshExpiresAt: now.Add(time.Hour), HTTPClient: server.Client(),
-		SessionChanged: func(contracts.AuthExchangeResponse) error { return errors.New("disk unavailable") },
+		SessionChanged: func(*clientpb.AuthenticationResponse) error { return errors.New("disk unavailable") },
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -84,13 +85,35 @@ func TestRefreshPersistenceFailureKeepsPreviousSessionAndStopsRequest(t *testing
 		t.Fatalf("original request continued after persistence failure: calls=%d", bootstrapCalls.Load())
 	}
 	current := store.Session()
-	if current.AccessToken != "old-access" || current.RefreshToken != "old-refresh" {
+	if current.GetAccessToken() != "old-access" || current.GetRefreshToken() != "old-refresh" {
 		t.Fatalf("in-memory session changed after persistence failure: %+v", current)
 	}
 }
 
 func releaseGeneration(writer http.ResponseWriter, generation string) {
-	writer.Header().Set(contracts.ReleaseGenerationHeader, generation)
+	writer.Header().Set("X-Cineko-Release-Generation", generation)
+}
+
+func authenticationResponse(now time.Time, accessToken, refreshToken string) *clientpb.AuthenticationResponse {
+	auth := &clientpb.AuthenticationResponse{}
+	auth.SetAccessToken(accessToken)
+	auth.SetExpiresAt(timestamppb.New(now.Add(time.Hour)))
+	auth.SetRefreshToken(refreshToken)
+	auth.SetRefreshExpiresAt(timestamppb.New(now.Add(24 * time.Hour)))
+	user := &clientpb.User{}
+	user.SetId("user")
+	auth.SetUser(user)
+	return auth
+}
+
+func writeProtoJSON(t *testing.T, writer http.ResponseWriter, message proto.Message) {
+	t.Helper()
+	contents, err := (protojson.MarshalOptions{UseProtoNames: false}).Marshal(message)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer.Header().Set("Content-Type", "application/json")
+	_, _ = writer.Write(contents)
 }
 
 func TestCheckHealthRequiresReadyCentral(t *testing.T) {
@@ -101,7 +124,9 @@ func TestCheckHealthRequiresReadyCentral(t *testing.T) {
 			http.NotFound(writer, request)
 			return
 		}
-		_, _ = writer.Write([]byte(`{"status":"ready"}`))
+		health := &commonpb.ServiceHealth{}
+		health.SetReady(&commonpb.Ready{})
+		writeProtoJSON(t, writer, health)
 	}))
 	t.Cleanup(server.Close)
 	if err := CheckHealth(t.Context(), server.URL, server.Client()); err != nil {
@@ -131,9 +156,14 @@ func TestOpenPINClassifiesAuthenticationFailures(t *testing.T) {
 			http.NotFound(writer, request)
 			return
 		}
-		writer.Header().Set("Content-Type", "application/json")
+		errorResponse := &commonpb.APIErrorResponse{}
+		apiError := &commonpb.APIError{}
+		apiError.SetCode("unauthorized")
+		apiError.SetMessage("invalid PIN")
+		apiError.SetRequestId("test-request")
+		errorResponse.SetError(apiError)
 		writer.WriteHeader(http.StatusUnauthorized)
-		_, _ = writer.Write([]byte(`{"error":{"code":"unauthorized","message":"invalid PIN"}}`))
+		writeProtoJSON(t, writer, errorResponse)
 	}))
 	client := server.Client()
 	url := server.URL
@@ -154,7 +184,9 @@ func TestStoreRecordsMonotonicReleaseGeneration(t *testing.T) {
 	server := httptest.NewTLSServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		releaseGeneration(writer, responses[requestIndex])
 		requestIndex++
-		_, _ = writer.Write([]byte(`{"status":"ready"}`))
+		health := &commonpb.ServiceHealth{}
+		health.SetReady(&commonpb.Ready{})
+		writeProtoJSON(t, writer, health)
 	}))
 	t.Cleanup(server.Close)
 	store, err := newStore(server.URL, "", server.Client())
@@ -162,10 +194,8 @@ func TestStoreRecordsMonotonicReleaseGeneration(t *testing.T) {
 		t.Fatal(err)
 	}
 	for range responses {
-		var output struct {
-			Status string `json:"status"`
-		}
-		if err := store.doRequest(t.Context(), http.MethodGet, "/health", "", nil, &output, nil); err != nil {
+		output := &commonpb.ServiceHealth{}
+		if err := store.doRequest(t.Context(), http.MethodGet, "/health", "", nil, output, nil); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -183,15 +213,17 @@ func TestStoreRejectsMissingOrMalformedReleaseGeneration(t *testing.T) {
 				if value != "" {
 					releaseGeneration(writer, value)
 				}
-				_, _ = writer.Write([]byte(`{"status":"ready"}`))
+				health := &commonpb.ServiceHealth{}
+				health.SetReady(&commonpb.Ready{})
+				writeProtoJSON(t, writer, health)
 			}))
 			t.Cleanup(server.Close)
 			store, err := newStore(server.URL, "", server.Client())
 			if err != nil {
 				t.Fatal(err)
 			}
-			var output any
-			if err := store.doRequest(t.Context(), http.MethodGet, "/health", "", nil, &output, nil); err == nil {
+			output := &commonpb.ServiceHealth{}
+			if err := store.doRequest(t.Context(), http.MethodGet, "/health", "", nil, output, nil); err == nil {
 				t.Fatal("invalid release generation accepted")
 			}
 		})
@@ -200,9 +232,17 @@ func TestStoreRejectsMissingOrMalformedReleaseGeneration(t *testing.T) {
 
 func TestResponseStatusClassifiesStaleRelease(t *testing.T) {
 	t.Parallel()
-	err := responseStatusError(http.StatusConflict, []byte(`{
-		"error":{"code":"stale_release","message":"runtime release is no longer current"}
-	}`))
+	errorResponse := &commonpb.APIErrorResponse{}
+	apiError := &commonpb.APIError{}
+	apiError.SetCode("stale_release")
+	apiError.SetMessage("runtime release is no longer current")
+	apiError.SetRequestId("test-request")
+	errorResponse.SetError(apiError)
+	contents, marshalErr := (protojson.MarshalOptions{UseProtoNames: false}).Marshal(errorResponse)
+	if marshalErr != nil {
+		t.Fatal(marshalErr)
+	}
+	err := responseStatusError(http.StatusConflict, contents)
 	if !errors.Is(err, ErrReleaseChanged) {
 		t.Fatalf("stale release error = %v", err)
 	}

@@ -7,25 +7,25 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
-	central "github.com/cineko-org/contracts/v3"
+	releasepb "github.com/cineko-org/contracts/gen/go/cineko/release"
 	bootstrap "github.com/cineko-org/launcher/internal/keys"
 	"github.com/cineko-org/launcher/internal/launcher/artifact"
 	"github.com/cineko-org/launcher/internal/launcher/managedfiles"
 	installedruntime "github.com/cineko-org/launcher/internal/launcher/runtime"
+
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func installRelease(
 	ctx context.Context,
 	config Config,
-	release central.RuntimeRelease,
+	release *releasepb.RuntimeRelease,
 ) (installedRelease, error) {
 	manifestPath := filepath.Join(config.DataDir, "runtime", "installed.json")
 	previousPath := filepath.Join(config.DataDir, "runtime", "previous.json")
@@ -54,7 +54,7 @@ func installRelease(
 	}
 	installed.ProbePublicKeyHash, installed.ProbePublicKeySpec, err = installProbePublicKeys(
 		filepath.Join(config.DataDir, "components", "keyring"),
-		release.Client.ProbeBootstrapPublicKeys,
+		release.GetClient().GetProbeBootstrapPublicKeys(),
 	)
 	if err != nil {
 		return installedRelease{}, err
@@ -76,21 +76,21 @@ func installArtifacts(
 	ctx context.Context,
 	config Config,
 	client *http.Client,
-	release central.RuntimeRelease,
+	release *releasepb.RuntimeRelease,
 ) (map[string]string, error) {
 	items := []installedruntime.Component{
-		{Name: "client", Artifact: release.Client.Artifact},
-		{Name: "browser", Artifact: release.Browser.Artifact},
-		{Name: "playwright", Artifact: release.Playwright.Artifact},
+		{Name: "client", Artifact: release.GetClient().GetArtifact()},
+		{Name: "browser", Artifact: release.GetBrowser().GetArtifact()},
+		{Name: "playwright", Artifact: release.GetPlaywright().GetArtifact()},
 	}
-	total := release.Client.Artifact.Size + release.Browser.Artifact.Size + release.Playwright.Artifact.Size
+	total := release.GetClient().GetArtifact().GetSize() + release.GetBrowser().GetArtifact().GetSize() + release.GetPlaywright().GetArtifact().GetSize()
 	paths := make(map[string]string, len(items))
 	var completed int64
 	for _, item := range items {
-		destination := filepath.Join(config.DataDir, "components", item.Name, item.Artifact.SHA256)
+		destination := filepath.Join(config.DataDir, "components", item.Name, item.Artifact.GetSha256())
 		if executable, err := installedruntime.LoadComponent(destination, item); err == nil {
 			paths[item.Name] = executable
-			completed += item.Artifact.Size
+			completed += item.Artifact.GetSize()
 			report(config, Progress{
 				Stage: StageChecking, Message: "설치된 구성요소 확인 중", Artifact: item.Name,
 				Downloaded: completed, Total: total,
@@ -119,16 +119,99 @@ func installArtifacts(
 			return nil, fmt.Errorf("install %s artifact: %w", item.Name, err)
 		}
 		paths[item.Name] = executable
-		completed += item.Artifact.Size
+		completed += item.Artifact.GetSize()
 		_ = os.Remove(archivePath)
 	}
 	return paths, nil
 }
 
+// MarshalJSON keeps the launcher-only installation metadata alongside the
+// generated RuntimeRelease ProtoJSON representation. The release itself is
+// never converted to a copied DTO or encoded with encoding/json.
+func (installed installedRelease) MarshalJSON() ([]byte, error) {
+	if installed.Release == nil {
+		return nil, errors.New("installed runtime release is missing")
+	}
+	release, err := (protojson.MarshalOptions{UseProtoNames: false}).Marshal(installed.Release)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(map[string]any{
+		"release":            json.RawMessage(release),
+		"clientPath":         installed.ClientPath,
+		"browserPath":        installed.BrowserPath,
+		"driverPath":         installed.DriverPath,
+		"probePublicKeyHash": installed.ProbePublicKeyHash,
+		"probePublicKeySpec": installed.ProbePublicKeySpec,
+	})
+}
+
+func (installed *installedRelease) UnmarshalJSON(contents []byte) error {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(contents, &fields); err != nil {
+		return err
+	}
+	for key := range fields {
+		switch key {
+		case "release", "clientPath", "browserPath", "driverPath", "probePublicKeyHash", "probePublicKeySpec":
+		default:
+			return fmt.Errorf("unknown installed runtime manifest field %q", key)
+		}
+	}
+	releaseContents, ok := fields["release"]
+	if !ok {
+		return errors.New("installed runtime release is missing")
+	}
+	release := &releasepb.RuntimeRelease{}
+	if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(releaseContents, release); err != nil {
+		return err
+	}
+	decodeString := func(name string) (string, error) {
+		contents, ok := fields[name]
+		if !ok {
+			return "", fmt.Errorf("installed runtime manifest field %q is missing", name)
+		}
+		var value string
+		if err := json.Unmarshal(contents, &value); err != nil {
+			return "", err
+		}
+		return value, nil
+	}
+	clientPath, err := decodeString("clientPath")
+	if err != nil {
+		return err
+	}
+	browserPath, err := decodeString("browserPath")
+	if err != nil {
+		return err
+	}
+	driverPath, err := decodeString("driverPath")
+	if err != nil {
+		return err
+	}
+	probePublicKeyHash, err := decodeString("probePublicKeyHash")
+	if err != nil {
+		return err
+	}
+	probePublicKeySpec, err := decodeString("probePublicKeySpec")
+	if err != nil {
+		return err
+	}
+	*installed = installedRelease{
+		Release:            release,
+		ClientPath:         clientPath,
+		BrowserPath:        browserPath,
+		DriverPath:         driverPath,
+		ProbePublicKeyHash: probePublicKeyHash,
+		ProbePublicKeySpec: probePublicKeySpec,
+	}
+	return nil
+}
+
 func loadInstalledRelease(
 	dataDir string,
 	manifestPath string,
-	release central.RuntimeRelease,
+	release *releasepb.RuntimeRelease,
 ) (installedRelease, error) {
 	installed, err := loadInstalledManifest(dataDir, manifestPath)
 	if err != nil {
@@ -146,9 +229,7 @@ func loadInstalledManifest(dataDir string, manifestPath string) (installedReleas
 		return installedRelease{}, err
 	}
 	var installed installedRelease
-	decoder := json.NewDecoder(strings.NewReader(string(contents)))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&installed); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
+	if err := json.Unmarshal(contents, &installed); err != nil {
 		return installedRelease{}, errors.New("installed runtime manifest is invalid")
 	}
 	if err := validateInstalledExecutables(dataDir, installed); err != nil {
@@ -156,22 +237,36 @@ func loadInstalledManifest(dataDir string, manifestPath string) (installedReleas
 	}
 	if err := validateInstalledPublicKeys(
 		dataDir, installed.ProbePublicKeyHash, installed.ProbePublicKeySpec,
-		installed.Release.Client.ProbeBootstrapPublicKeys,
+		installed.Release.GetClient().GetProbeBootstrapPublicKeys(),
 	); err != nil {
 		return installedRelease{}, err
 	}
 	return installed, nil
 }
 
-func sameRuntimeRelease(left central.RuntimeRelease, right central.RuntimeRelease) bool {
-	return left.Client.Version == right.Client.Version &&
-		left.Client.Protocol == right.Client.Protocol &&
-		left.Client.Artifact.SHA256 == right.Client.Artifact.SHA256 &&
-		left.Browser.Revision == right.Browser.Revision &&
-		left.Browser.Artifact.SHA256 == right.Browser.Artifact.SHA256 &&
-		left.Playwright.Version == right.Playwright.Version &&
-		left.Playwright.Artifact.SHA256 == right.Playwright.Artifact.SHA256 &&
-		maps.Equal(left.Client.ProbeBootstrapPublicKeys, right.Client.ProbeBootstrapPublicKeys)
+func sameRuntimeRelease(left *releasepb.RuntimeRelease, right *releasepb.RuntimeRelease) bool {
+	if left == nil || right == nil {
+		return left == right
+	}
+	return left.GetClient().GetVersion() == right.GetClient().GetVersion() &&
+		left.GetClient().GetArtifact().GetSha256() == right.GetClient().GetArtifact().GetSha256() &&
+		left.GetBrowser().GetRevision() == right.GetBrowser().GetRevision() &&
+		left.GetBrowser().GetArtifact().GetSha256() == right.GetBrowser().GetArtifact().GetSha256() &&
+		left.GetPlaywright().GetVersion() == right.GetPlaywright().GetVersion() &&
+		left.GetPlaywright().GetArtifact().GetSha256() == right.GetPlaywright().GetArtifact().GetSha256() &&
+		mapsEqual(left.GetClient().GetProbeBootstrapPublicKeys(), right.GetClient().GetProbeBootstrapPublicKeys())
+}
+
+func mapsEqual(left, right map[string]string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for key, value := range left {
+		if right[key] != value {
+			return false
+		}
+	}
+	return true
 }
 
 func rollbackInstalledRelease(dataDir string, installed installedRelease) error {
@@ -185,7 +280,7 @@ func rollbackInstalledRelease(dataDir string, installed installedRelease) error 
 		dataDir,
 		installed.Previous.ProbePublicKeyHash,
 		installed.Previous.ProbePublicKeySpec,
-		installed.Previous.Release.Client.ProbeBootstrapPublicKeys,
+		installed.Previous.Release.GetClient().GetProbeBootstrapPublicKeys(),
 	); err != nil {
 		return err
 	}
@@ -200,8 +295,8 @@ func finalizeInstalledRelease(dataDir string, installed installedRelease) {
 		return
 	}
 	installedruntime.Cleanup(dataDir, map[string]string{
-		"client": installed.Release.Client.Artifact.SHA256, "browser": installed.Release.Browser.Artifact.SHA256,
-		"playwright": installed.Release.Playwright.Artifact.SHA256, "keyring": installed.ProbePublicKeyHash,
+		"client": installed.Release.GetClient().GetArtifact().GetSha256(), "browser": installed.Release.GetBrowser().GetArtifact().GetSha256(),
+		"playwright": installed.Release.GetPlaywright().GetArtifact().GetSha256(), "keyring": installed.ProbePublicKeyHash,
 	})
 }
 
@@ -209,15 +304,15 @@ func validateInstalledExecutables(dataDir string, installed installedRelease) er
 	componentsRoot := filepath.Join(dataDir, "components")
 	items := []struct {
 		name       string
-		artifact   central.ReleaseArtifact
+		artifact   *releasepb.Artifact
 		storedPath string
 	}{
-		{name: "client", artifact: installed.Release.Client.Artifact, storedPath: installed.ClientPath},
-		{name: "browser", artifact: installed.Release.Browser.Artifact, storedPath: installed.BrowserPath},
-		{name: "playwright", artifact: installed.Release.Playwright.Artifact, storedPath: installed.DriverPath},
+		{name: "client", artifact: installed.Release.GetClient().GetArtifact(), storedPath: installed.ClientPath},
+		{name: "browser", artifact: installed.Release.GetBrowser().GetArtifact(), storedPath: installed.BrowserPath},
+		{name: "playwright", artifact: installed.Release.GetPlaywright().GetArtifact(), storedPath: installed.DriverPath},
 	}
 	for _, item := range items {
-		root := filepath.Join(componentsRoot, item.name, item.artifact.SHA256)
+		root := filepath.Join(componentsRoot, item.name, item.artifact.GetSha256())
 		executable, err := installedruntime.LoadComponent(root, installedruntime.Component{Name: item.name, Artifact: item.artifact})
 		if err != nil {
 			return fmt.Errorf("validate installed %s: %w", item.name, err)

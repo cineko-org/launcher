@@ -4,7 +4,7 @@ This inventory records externally observable behavior. Deployment topology, host
 
 ## Compatibility and authentication
 
-- Every Central request sends the contracts v3 protocol header. Every response must carry a non-negative release generation.
+- Central messages use the generated `cineko.client` and `cineko.release` ProtoJSON contracts directly. Every response must carry a non-negative release generation header.
 - Startup checks `GET /health` before asking for a PIN. Only `ready` continues.
 - A six-digit PIN is exchanged with `POST /v1/auth/pin`. A supplied access credential uses `POST /v1/auth/exchange`.
 - Authenticated calls use bearer access tokens. An expired or rejected access token is refreshed once with `POST /v1/auth/refresh`, then the original call is retried once.
@@ -35,7 +35,7 @@ This inventory records externally observable behavior. Deployment topology, host
 | Persist session | Launcher data directory | Atomic owner-only JSON replacement | Refresh/request fails if rotated session cannot be saved |
 | Download artifact | Versioned cache | Size and SHA-256 verified; resumable range data promoted atomically | Invalid/partial content is discarded or resumed; default deadline is 10 minutes |
 | Install runtime | Versioned component directories and installed manifest | Archive limits, executable, tree hash, compatibility, and probe-key metadata validate before activation | Previous manifest is retained for rollback |
-| Launch Client | Child process | Exact launch envelope and a non-secret startup nonce are passed on standard input; legacy sensitive environment values are removed | Exit, timeout, invalid marker, or cancellation before startup readiness rolls back newly activated runtime |
+| Launch Client | Child process | Generated `cineko.client.LaunchEnvelope` ProtoJSON and a non-secret startup nonce are passed through standard input/environment; sensitive environment values are removed | Exit, timeout, invalid marker, or cancellation before startup readiness rolls back newly activated runtime |
 | Finalize runtime | Installed manifest and component cache | A matching owner-only atomic startup marker proves the new Wails runtime installed its supervisors | Previous Client, Chromium, and Playwright artifacts are removed immediately after readiness; later Client exit does not roll back a runtime that already started successfully |
 | Download portable Launcher | User-selected destination | Verified cache copied through atomic replacement | Existing destination survives a failed download/copy |
 

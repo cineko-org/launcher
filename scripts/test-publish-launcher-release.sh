@@ -26,10 +26,10 @@ run_publisher() {
 run_publisher >/dev/null
 jq -se '
   (length == 1) and
-  (.[0] | .schemaVersion == 2 and (.payload.releases |
+  (.[0] | (.releases |
     (length == 3) and
-    all(.[]; .version == "1.2.3" and .protocol == 3 and .launcher.size > 0 and (.launcher.sha256 | length) == 64 and (.launcher.url | startswith("https://github.example/releases/download/v1.2.3/"))) and
-    any(.[]; .platform == "linux" and .launcher.executable == "cineko-launcher-v1.2.3-linux-amd64.AppImage" and (.launcher.url | endswith(".AppImage")))
+    all(.[]; .version == "1.2.3" and .architecture != null and .launcher.size > 0 and (.launcher.sha256 | length) == 64 and (.launcher.url | startswith("https://github.example/releases/download/v1.2.3/"))) and
+    any(.[]; .platform == "linux" and .architecture == "amd64" and .launcher.executable == "cineko-launcher-v1.2.3-linux-amd64.AppImage" and (.launcher.url | endswith(".AppImage")))
   ))
 ' "$payloads" >/dev/null
 

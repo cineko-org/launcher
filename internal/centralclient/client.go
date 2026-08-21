@@ -3,7 +3,6 @@ package centralclient
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -16,7 +15,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	contracts "github.com/cineko-org/contracts/v3"
+	clientpb "github.com/cineko-org/contracts/gen/go/cineko/client"
+	commonpb "github.com/cineko-org/contracts/gen/go/cineko/common"
+	releasepb "github.com/cineko-org/contracts/gen/go/cineko/release"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -37,7 +41,7 @@ type Config struct {
 	UserID         string
 	AccessToken    string
 	HTTPClient     *http.Client
-	SessionChanged func(contracts.AuthExchangeResponse) error
+	SessionChanged func(*clientpb.AuthenticationResponse) error
 }
 
 type PINConfig struct {
@@ -46,7 +50,7 @@ type PINConfig struct {
 	InstallationID string
 	DeviceID       string
 	HTTPClient     *http.Client
-	SessionChanged func(contracts.AuthExchangeResponse) error
+	SessionChanged func(*clientpb.AuthenticationResponse) error
 }
 
 type SessionConfig struct {
@@ -57,7 +61,7 @@ type SessionConfig struct {
 	RefreshToken     string
 	RefreshExpiresAt time.Time
 	HTTPClient       *http.Client
-	SessionChanged   func(contracts.AuthExchangeResponse) error
+	SessionChanged   func(*clientpb.AuthenticationResponse) error
 }
 
 type Store struct {
@@ -71,7 +75,7 @@ type Store struct {
 	expiresAt         time.Time
 	refreshToken      string
 	refreshExpiresAt  time.Time
-	sessionChanged    func(contracts.AuthExchangeResponse) error
+	sessionChanged    func(*clientpb.AuthenticationResponse) error
 	releaseGeneration atomic.Int64
 }
 
@@ -84,10 +88,11 @@ func Open(ctx context.Context, config Config) (*Store, error) {
 	if store.userID == "" || strings.TrimSpace(config.AccessToken) == "" {
 		return nil, errors.New("central user ID and access token are required")
 	}
-	var auth contracts.AuthExchangeResponse
-	err = store.request(ctx, http.MethodPost, "/v1/auth/exchange", false, contracts.AuthExchangeRequest{
-		UserID: store.userID, AccessToken: strings.TrimSpace(config.AccessToken),
-	}, &auth, nil)
+	input := &clientpb.TokenExchangeRequest{}
+	input.SetUserId(store.userID)
+	input.SetAccessToken(strings.TrimSpace(config.AccessToken))
+	auth := &clientpb.AuthenticationResponse{}
+	err = store.request(ctx, http.MethodPost, "/v1/auth/exchange", false, input, auth, nil)
 	if err != nil {
 		return nil, fmt.Errorf("authenticate with Central: %w", err)
 	}
@@ -103,17 +108,19 @@ func OpenPIN(ctx context.Context, config PINConfig) (*Store, error) {
 		return nil, err
 	}
 	store.sessionChanged = config.SessionChanged
-	var auth contracts.AuthExchangeResponse
-	err = store.request(ctx, http.MethodPost, "/v1/auth/pin", false, contracts.ClientPINExchangeRequest{
-		PIN: config.PIN, InstallationID: config.InstallationID, DeviceID: config.DeviceID,
-	}, &auth, nil)
+	input := &clientpb.PinExchangeRequest{}
+	input.SetPin(config.PIN)
+	input.SetInstallationId(config.InstallationID)
+	input.SetDeviceId(config.DeviceID)
+	auth := &clientpb.AuthenticationResponse{}
+	err = store.request(ctx, http.MethodPost, "/v1/auth/pin", false, input, auth, nil)
 	if err != nil {
 		if errors.Is(err, errUnauthorized) {
 			return nil, ErrPINInvalid
 		}
 		return nil, fmt.Errorf("authenticate PIN with Central: %w", err)
 	}
-	store.userID = strings.TrimSpace(auth.User.ID)
+	store.userID = strings.TrimSpace(auth.GetUser().GetId())
 	if store.userID == "" || store.acceptSession(auth) != nil {
 		return nil, errors.New("central returned an invalid PIN session")
 	}
@@ -125,13 +132,11 @@ func CheckHealth(ctx context.Context, baseURL string, client *http.Client) error
 	if err != nil {
 		return err
 	}
-	var health struct {
-		Status string `json:"status"`
-	}
-	if err := store.doRequest(ctx, http.MethodGet, "/health", "", nil, &health, nil); err != nil {
+	health := &commonpb.ServiceHealth{}
+	if err := store.doRequest(ctx, http.MethodGet, "/health", "", nil, health, nil); err != nil {
 		return fmt.Errorf("%w: %w", ErrServerUnavailable, err)
 	}
-	if health.Status != "ready" {
+	if health.GetReady() == nil {
 		return fmt.Errorf("%w: unexpected health status", ErrServerUnavailable)
 	}
 	return nil
@@ -156,24 +161,28 @@ func Resume(config SessionConfig) (*Store, error) {
 }
 
 func (store *Store) ValidateSession(ctx context.Context) error {
-	var bootstrap contracts.ClientBootstrap
-	if err := store.request(ctx, http.MethodGet, "/v1/client/bootstrap", true, nil, &bootstrap, nil); err != nil {
+	bootstrap := &clientpb.Bootstrap{}
+	if err := store.request(ctx, http.MethodGet, "/v1/client/bootstrap", true, nil, bootstrap, nil); err != nil {
 		return err
 	}
-	if bootstrap.User.ID != store.userID {
+	if bootstrap.GetUser().GetId() != store.userID {
 		return errors.New("central session user mismatch")
 	}
 	return nil
 }
 
-func (store *Store) Session() contracts.AuthExchangeResponse {
+func (store *Store) Session() *clientpb.AuthenticationResponse {
 	store.authMu.Lock()
 	defer store.authMu.Unlock()
-	return contracts.AuthExchangeResponse{
-		AccessToken: store.accessToken, ExpiresAt: store.expiresAt,
-		RefreshToken: store.refreshToken, RefreshExpiresAt: store.refreshExpiresAt,
-		User: contracts.ClientUser{ID: store.userID},
-	}
+	auth := &clientpb.AuthenticationResponse{}
+	auth.SetAccessToken(store.accessToken)
+	auth.SetExpiresAt(timestamppb.New(store.expiresAt))
+	auth.SetRefreshToken(store.refreshToken)
+	auth.SetRefreshExpiresAt(timestamppb.New(store.refreshExpiresAt))
+	user := &clientpb.User{}
+	user.SetId(store.userID)
+	auth.SetUser(user)
+	return auth
 }
 
 func (store *Store) Close() error { return nil }
@@ -182,18 +191,18 @@ func (store *Store) Logout(ctx context.Context) error {
 	return store.request(ctx, http.MethodPost, "/v1/auth/logout", true, nil, nil, nil)
 }
 
-func (store *Store) RegisterDevice(ctx context.Context, device contracts.ClientDevice) (contracts.ClientDevice, error) {
-	var registered contracts.ClientDevice
+func (store *Store) RegisterDevice(ctx context.Context, device *clientpb.Device) (*clientpb.Device, error) {
+	registered := &clientpb.Device{}
 	err := store.request(
-		ctx, http.MethodPut, "/v1/devices/"+url.PathEscape(device.InstallationID), true, device, &registered, nil,
+		ctx, http.MethodPut, "/v1/devices/"+url.PathEscape(device.GetInstallationId()), true, device, registered, nil,
 	)
 	return registered, err
 }
 
-func (store *Store) CurrentRuntimeRelease(ctx context.Context, platform, arch string) (contracts.RuntimeRelease, error) {
+func (store *Store) CurrentRuntimeRelease(ctx context.Context, platform, arch string) (*releasepb.RuntimeRelease, error) {
 	query := url.Values{"channel": {"stable"}, "platform": {platform}, "arch": {arch}}
-	var release contracts.RuntimeRelease
-	err := store.request(ctx, http.MethodGet, "/v1/releases/runtime/current?"+query.Encode(), true, nil, &release, nil)
+	release := &releasepb.RuntimeRelease{}
+	err := store.request(ctx, http.MethodGet, "/v1/releases/runtime/current?"+query.Encode(), true, nil, release, nil)
 	return release, err
 }
 
@@ -201,10 +210,10 @@ func (store *Store) CurrentLauncherRelease(
 	ctx context.Context,
 	platform string,
 	arch string,
-) (contracts.LauncherRelease, error) {
+) (*releasepb.LauncherRelease, error) {
 	query := url.Values{"channel": {"stable"}, "platform": {platform}, "arch": {arch}}
-	var release contracts.LauncherRelease
-	err := store.request(ctx, http.MethodGet, "/v1/releases/launcher/current?"+query.Encode(), true, nil, &release, nil)
+	release := &releasepb.LauncherRelease{}
+	err := store.request(ctx, http.MethodGet, "/v1/releases/launcher/current?"+query.Encode(), true, nil, release, nil)
 	return release, err
 }
 
@@ -214,11 +223,11 @@ func (store *Store) ReleaseGeneration() int64 {
 
 func (store *Store) IssueLaunchTicket(
 	ctx context.Context,
-	request contracts.LaunchTicketRequest,
-) (contracts.LaunchTicketResponse, error) {
-	var response contracts.LaunchTicketResponse
-	err := store.request(ctx, http.MethodPost, "/v1/launch-tickets", true, request, &response, map[string]string{
-		"Idempotency-Key": request.Nonce,
+	request *clientpb.LaunchTicketRequest,
+) (*clientpb.LaunchTicketResponse, error) {
+	response := &clientpb.LaunchTicketResponse{}
+	err := store.request(ctx, http.MethodPost, "/v1/launch-tickets", true, request, response, map[string]string{
+		"Idempotency-Key": request.GetNonce(),
 	})
 	return response, err
 }
@@ -238,7 +247,7 @@ func (store *Store) request(
 	ctx context.Context,
 	method, path string,
 	authenticated bool,
-	input, output any,
+	input, output proto.Message,
 	headers map[string]string,
 ) error {
 	if !authenticated {
@@ -262,12 +271,12 @@ func (store *Store) request(
 func (store *Store) doRequest(
 	ctx context.Context,
 	method, path, token string,
-	input, output any,
+	input, output proto.Message,
 	headers map[string]string,
 ) error {
 	var body io.Reader
 	if input != nil {
-		encoded, err := json.Marshal(input)
+		encoded, err := (protojson.MarshalOptions{UseProtoNames: false}).Marshal(input)
 		if err != nil {
 			return fmt.Errorf("encode Central request: %w", err)
 		}
@@ -277,7 +286,6 @@ func (store *Store) doRequest(
 	if err != nil {
 		return fmt.Errorf("create Central request: %w", err)
 	}
-	request.Header.Set(contracts.ProtocolHeader, strconv.Itoa(contracts.ProtocolVersion))
 	if input != nil {
 		request.Header.Set("Content-Type", "application/json")
 	}
@@ -292,7 +300,7 @@ func (store *Store) doRequest(
 		return fmt.Errorf("%w: send Central request: %w", ErrServerUnavailable, err)
 	}
 	defer func() { _ = response.Body.Close() }()
-	if err := store.recordReleaseGeneration(response.Header.Get(contracts.ReleaseGenerationHeader)); err != nil {
+	if err := store.recordReleaseGeneration(response.Header.Get("X-Cineko-Release-Generation")); err != nil {
 		return err
 	}
 	contents, err := io.ReadAll(io.LimitReader(response.Body, maximumResponseBody+1))
@@ -311,7 +319,7 @@ func (store *Store) doRequest(
 		}
 		return nil
 	}
-	if err := decodeJSON(contents, output); err != nil {
+	if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(contents, output); err != nil {
 		return fmt.Errorf("decode Central response: %w", err)
 	}
 	return nil
@@ -350,10 +358,10 @@ func (store *Store) sessionToken(ctx context.Context, forceRefresh bool) (string
 	if store.refreshToken == "" || !store.refreshExpiresAt.After(now) {
 		return "", errUnauthorized
 	}
-	var auth contracts.AuthExchangeResponse
-	err := store.doRequest(ctx, http.MethodPost, "/v1/auth/refresh", "", contracts.AuthRefreshRequest{
-		RefreshToken: store.refreshToken,
-	}, &auth, nil)
+	input := &clientpb.TokenRefreshRequest{}
+	input.SetRefreshToken(store.refreshToken)
+	auth := &clientpb.AuthenticationResponse{}
+	err := store.doRequest(ctx, http.MethodPost, "/v1/auth/refresh", "", input, auth, nil)
 	if err != nil {
 		return "", fmt.Errorf("refresh Central session: %w", err)
 	}
@@ -363,15 +371,16 @@ func (store *Store) sessionToken(ctx context.Context, forceRefresh bool) (string
 	return store.accessToken, nil
 }
 
-func (store *Store) acceptSession(auth contracts.AuthExchangeResponse) error {
+func (store *Store) acceptSession(auth *clientpb.AuthenticationResponse) error {
 	store.authMu.Lock()
 	defer store.authMu.Unlock()
 	return store.acceptSessionLocked(auth, store.clock())
 }
 
-func (store *Store) acceptSessionLocked(auth contracts.AuthExchangeResponse, now time.Time) error {
-	if strings.TrimSpace(auth.AccessToken) == "" || strings.TrimSpace(auth.RefreshToken) == "" ||
-		auth.User.ID != store.userID || !auth.ExpiresAt.After(now) || !auth.RefreshExpiresAt.After(auth.ExpiresAt) {
+func (store *Store) acceptSessionLocked(auth *clientpb.AuthenticationResponse, now time.Time) error {
+	if auth == nil || strings.TrimSpace(auth.GetAccessToken()) == "" || strings.TrimSpace(auth.GetRefreshToken()) == "" ||
+		auth.GetUser().GetId() != store.userID || auth.GetExpiresAt() == nil || auth.GetRefreshExpiresAt() == nil ||
+		!auth.GetExpiresAt().AsTime().After(now) || !auth.GetRefreshExpiresAt().AsTime().After(auth.GetExpiresAt().AsTime()) {
 		return errors.New("invalid Central Client session")
 	}
 	if store.sessionChanged != nil {
@@ -379,45 +388,28 @@ func (store *Store) acceptSessionLocked(auth contracts.AuthExchangeResponse, now
 			return fmt.Errorf("persist refreshed Central session: %w", err)
 		}
 	}
-	store.accessToken = auth.AccessToken
-	store.expiresAt = auth.ExpiresAt
-	store.refreshToken = auth.RefreshToken
-	store.refreshExpiresAt = auth.RefreshExpiresAt
+	store.accessToken = auth.GetAccessToken()
+	store.expiresAt = auth.GetExpiresAt().AsTime()
+	store.refreshToken = auth.GetRefreshToken()
+	store.refreshExpiresAt = auth.GetRefreshExpiresAt().AsTime()
 	return nil
 }
 
 func decodeAPIError(status int, contents []byte) error {
-	var envelope struct {
-		Error struct {
-			Code    string `json:"code"`
-			Message string `json:"message"`
-		} `json:"error"`
-	}
-	if decodeJSON(contents, &envelope) != nil || envelope.Error.Code == "" {
+	envelope := &commonpb.APIErrorResponse{}
+	if (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(contents, envelope) != nil || envelope.GetError().GetCode() == "" {
 		return fmt.Errorf("central request failed with HTTP %d", status)
 	}
-	switch envelope.Error.Code {
+	switch envelope.GetError().GetCode() {
 	case "unauthorized":
-		return fmt.Errorf("%w: %s", errUnauthorized, envelope.Error.Message)
+		return fmt.Errorf("%w: %s", errUnauthorized, envelope.GetError().GetMessage())
 	case "rate_limited":
-		return fmt.Errorf("%w: %s", ErrPINRateLimited, envelope.Error.Message)
+		return fmt.Errorf("%w: %s", ErrPINRateLimited, envelope.GetError().GetMessage())
 	case "stale_release":
-		return fmt.Errorf("%w: %s", ErrReleaseChanged, envelope.Error.Message)
+		return fmt.Errorf("%w: %s", ErrReleaseChanged, envelope.GetError().GetMessage())
 	default:
-		return fmt.Errorf("central %s: %s", envelope.Error.Code, envelope.Error.Message)
+		return fmt.Errorf("central %s: %s", envelope.GetError().GetCode(), envelope.GetError().GetMessage())
 	}
-}
-
-func decodeJSON(contents []byte, output any) error {
-	decoder := json.NewDecoder(bytes.NewReader(contents))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(output); err != nil {
-		return err
-	}
-	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
-		return errors.New("response must contain one JSON value")
-	}
-	return nil
 }
 
 func validateBaseURL(value string) (string, error) {

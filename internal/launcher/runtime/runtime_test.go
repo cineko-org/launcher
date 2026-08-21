@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	central "github.com/cineko-org/contracts/v3"
+	releasepb "github.com/cineko-org/contracts/gen/go/cineko/release"
 )
 
 func TestLoadComponentDetectsMutation(t *testing.T) {
@@ -17,9 +17,10 @@ func TestLoadComponentDetectsMutation(t *testing.T) {
 	if err := writeComponentIntegrity(root, digest); err != nil {
 		t.Fatal(err)
 	}
-	item := Component{Name: "client", Artifact: central.ReleaseArtifact{
-		SHA256: digest, Executable: "client",
-	}}
+	artifact := &releasepb.Artifact{}
+	artifact.SetSha256(digest)
+	artifact.SetExecutable("client")
+	item := Component{Name: "client", Artifact: artifact}
 	if _, err := LoadComponent(root, item); err != nil {
 		t.Fatal(err)
 	}

@@ -37,11 +37,11 @@ readonly releases_file="$temporary_root/releases.jsonl"
 : >"$releases_file"
 
 append_release() {
-  local platform="$1"
-  local arch="$2"
-  local extension="$3"
-  local executable="$4"
-  local platform_key="${platform}-${arch}"
+	local platform="$1"
+	local architecture="$2"
+	local extension="$3"
+	local executable="$4"
+	local platform_key="${platform}-${architecture}"
   local filename="cineko-launcher-v${version}-${platform_key}.${extension}"
   local artifact_path="${assets_dir}/${filename}"
 
@@ -54,17 +54,17 @@ append_release() {
   local sha256
   size="$(wc -c <"$artifact_path" | tr -d '[:space:]')"
   sha256="$(sha256sum "$artifact_path" | awk '{print $1}')"
-  jq -cn \
-    --arg channel stable \
-    --arg platform "$platform" \
-    --arg arch "$arch" \
+	jq -cn \
+	    --arg channel stable \
+	    --arg platform "$platform" \
+	    --arg architecture "$architecture" \
     --arg version "$version" \
     --arg url "${public_base}/${filename}" \
     --arg sha256 "$sha256" \
     --arg executable "$executable" \
     --arg publishedAt "$published_at" \
     --argjson size "$size" \
-    '{channel:$channel,platform:$platform,arch:$arch,version:$version,protocol:3,launcher:{url:$url,size:$size,sha256:$sha256,executable:$executable},publishedAt:$publishedAt}' \
+	    '{channel:$channel,platform:$platform,architecture:$architecture,version:$version,launcher:{url:$url,size:$size,sha256:$sha256,executable:$executable},publishedAt:$publishedAt}' \
     >>"$releases_file"
 }
 
@@ -72,12 +72,11 @@ append_release darwin arm64 zip 'Cineko Launcher.app/Contents/MacOS/Cineko Launc
 append_release windows amd64 exe 'Cineko Launcher.exe'
 append_release linux amd64 AppImage "cineko-launcher-v${version}-linux-amd64.AppImage"
 
-payload="$(jq -sc '{schemaVersion:2,payload:{releases:.}}' "$releases_file")"
+payload="$(jq -sc '{releases:.}' "$releases_file")"
 curl --fail-with-body --retry 3 --retry-all-errors \
   --request POST \
   --header "Authorization: Bearer ${CINEKO_RELEASE_PUBLISH_TOKEN}" \
   --header 'Content-Type: application/json' \
-  --header 'X-Cineko-Protocol: 3' \
   --data "$payload" \
   "${CINEKO_CENTRAL_URL%/}/v1/release-registry/launcher" |
   jq -e '.generation | numbers | select(. > 0)' >/dev/null

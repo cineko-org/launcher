@@ -9,10 +9,10 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/hex"
-	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -23,8 +23,13 @@ import (
 	"testing"
 	"time"
 
-	central "github.com/cineko-org/contracts/v3"
+	clientpb "github.com/cineko-org/contracts/gen/go/cineko/client"
+	commonpb "github.com/cineko-org/contracts/gen/go/cineko/common"
+	releasepb "github.com/cineko-org/contracts/gen/go/cineko/release"
 	"github.com/cineko-org/launcher/internal/launcher/artifact"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestLauncherDownloadsVerifiesCachesAndRunsClient(t *testing.T) {
@@ -32,7 +37,7 @@ func TestLauncherDownloadsVerifiesCachesAndRunsClient(t *testing.T) {
 		t.Skip("shell fixture is covered on macOS and Linux runners")
 	}
 	relaunchMarker := filepath.Join(t.TempDir(), "client-requested-update")
-	clientArchive := zipArtifact(t, "client.sh", fmt.Sprintf("#!/bin/sh\nif [ ! -e %q ]; then touch %q; exit 75; fi\npayload=$(cat)\n[ -z \"$CINEKO_CENTRAL_ACCESS_TOKEN\" ] || exit 21\n[ -x \"$CINEKO_CHROME_PATH\" ] || exit 22\n[ -x \"$CINEKO_PLAYWRIGHT_DRIVER_PATH\" ] || exit 23\nnonce=$(printf '%%s' \"$payload\" | sed -n 's/.*\"startupReadyNonce\":\"\\([^\"]*\\)\".*/\\1/p')\n[ -n \"$nonce\" ] || exit 24\nprintf '%%s\\n' \"$nonce\" > \"$CINEKO_DATA_DIR/runtime/startup/$nonce.ready\"\nchmod 600 \"$CINEKO_DATA_DIR/runtime/startup/$nonce.ready\"\nprintf '%%s' \"$payload\"\n", relaunchMarker, relaunchMarker))
+	clientArchive := zipArtifact(t, "client.sh", fmt.Sprintf("#!/bin/sh\nif [ ! -e %q ]; then touch %q; exit 75; fi\npayload=$(cat)\n[ -z \"$CINEKO_CENTRAL_ACCESS_TOKEN\" ] || exit 21\n[ -x \"$CINEKO_CHROME_PATH\" ] || exit 22\n[ -x \"$CINEKO_PLAYWRIGHT_DRIVER_PATH\" ] || exit 23\nnonce=\"$CINEKO_STARTUP_READY_NONCE\"\n[ -n \"$nonce\" ] || exit 24\nprintf '%%s\\n' \"$nonce\" > \"$CINEKO_DATA_DIR/runtime/startup/$nonce.ready\"\nchmod 600 \"$CINEKO_DATA_DIR/runtime/startup/$nonce.ready\"\nprintf '%%s' \"$payload\"\n", relaunchMarker, relaunchMarker))
 	browserArchive := zipArtifact(t, "browser", "#!/bin/sh\nexit 0\n")
 	driverArchive := zipArtifacts(t, map[string]string{
 		"node": "#!/bin/sh\nexit 0\n", "package/cli.js": "#!/usr/bin/env node\n",
@@ -42,38 +47,26 @@ func TestLauncherDownloadsVerifiesCachesAndRunsClient(t *testing.T) {
 	generation.Store(17)
 	var runtimeRequests atomic.Int32
 	var ticketRequests atomic.Int32
-	var release central.RuntimeRelease
-	var ticketRequest central.LaunchTicketRequest
+	var release *releasepb.RuntimeRelease
+	ticketRequest := &clientpb.LaunchTicketRequest{}
 	server := httptest.NewTLSServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.URL.Path == "/v1/releases/runtime/current" && runtimeRequests.Add(1) == 3 {
 			generation.Store(19)
 		}
 		if !strings.HasSuffix(request.URL.Path, ".zip") {
-			writer.Header().Set(central.ReleaseGenerationHeader, fmt.Sprint(generation.Load()))
+			writer.Header().Set("X-Cineko-Release-Generation", fmt.Sprint(generation.Load()))
 		}
 		switch request.URL.Path {
 		case "/health":
-			_ = json.NewEncoder(writer).Encode(map[string]string{"status": "ready"})
+			writeProtoJSON(t, writer, serviceHealthReady())
 		case "/v1/auth/exchange":
-			_ = json.NewEncoder(writer).Encode(central.AuthExchangeResponse{ // #nosec G117 -- test-only session fixture.
-				AccessToken: "session", ExpiresAt: time.Now().Add(time.Hour),
-				RefreshToken: "refresh", RefreshExpiresAt: time.Now().Add(24 * time.Hour),
-				User: central.ClientUser{ID: "user"},
-			})
+			writeProtoJSON(t, writer, authenticationResponse(time.Now(), "session"))
 		case "/v1/releases/runtime/current":
-			_ = json.NewEncoder(writer).Encode(release)
+			writeProtoJSON(t, writer, release)
 		case "/v1/releases/launcher/current":
-			_ = json.NewEncoder(writer).Encode(central.LauncherRelease{
-				Channel: "stable", Platform: runtime.GOOS, Arch: runtime.GOARCH,
-				Version: "1.0.0", Protocol: central.ProtocolVersion,
-				Launcher: central.ReleaseArtifact{
-					URL: "https://cdn.example/launcher.zip", Size: 1,
-					SHA256: strings.Repeat("a", 64), Executable: "launcher",
-				},
-				PublishedAt: time.Now().UTC(),
-			})
+			writeProtoJSON(t, writer, launcherRelease("1.0.0", testArtifact("https://cdn.example/launcher.zip", 1, strings.Repeat("a", 64), "launcher")))
 		case "/v1/launch-tickets":
-			if err := json.NewDecoder(request.Body).Decode(&ticketRequest); err != nil {
+			if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(readBody(t, request), ticketRequest); err != nil {
 				t.Errorf("decode launch ticket request: %v", err)
 			}
 			if request.Header.Get("Idempotency-Key") == "" {
@@ -81,14 +74,15 @@ func TestLauncherDownloadsVerifiesCachesAndRunsClient(t *testing.T) {
 			}
 			if ticketRequests.Add(1) == 1 {
 				generation.Store(18)
-				writer.Header().Set(central.ReleaseGenerationHeader, "18")
+				writer.Header().Set("X-Cineko-Release-Generation", "18")
 				writer.WriteHeader(http.StatusConflict)
-				_, _ = writer.Write([]byte(`{"error":{"code":"stale_release","message":"runtime release changed"}}`))
+				writeProtoJSON(t, writer, apiErrorResponse("stale_release", "runtime release changed"))
 				return
 			}
-			_ = json.NewEncoder(writer).Encode(central.LaunchTicketResponse{
-				LaunchTicket: "launch-secret", ExpiresAt: time.Now().Add(time.Minute),
-			})
+			ticket := &clientpb.LaunchTicketResponse{}
+			ticket.SetLaunchTicket("launch-secret")
+			ticket.SetExpiresAt(timestamppb.New(time.Now().Add(time.Minute)))
+			writeProtoJSON(t, writer, ticket)
 		case "/client.zip":
 			if request.Header.Get("Authorization") != "" {
 				t.Error("public client artifact request contains Central authorization")
@@ -109,34 +103,22 @@ func TestLauncherDownloadsVerifiesCachesAndRunsClient(t *testing.T) {
 			_, _ = writer.Write(driverArchive)
 		default:
 			if strings.HasPrefix(request.URL.Path, "/v1/devices/") {
-				var device central.ClientDevice
-				_ = json.NewDecoder(request.Body).Decode(&device)
-				_ = json.NewEncoder(writer).Encode(device)
+				device := &clientpb.Device{}
+				if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(readBody(t, request), device); err != nil {
+					t.Errorf("decode device request: %v", err)
+				}
+				writeProtoJSON(t, writer, device)
 				return
 			}
 			http.NotFound(writer, request)
 		}
 	}))
 	t.Cleanup(server.Close)
-	release = central.RuntimeRelease{
-		Client: central.ClientRelease{
-			Channel: "stable", Platform: runtime.GOOS, Arch: runtime.GOARCH, Version: "1.0.0",
-			MinimumLauncherVersion: "1.0.0", MinimumBrowserRevision: "1234",
-			PlaywrightVersion: "1.61.1", Protocol: central.ProtocolVersion,
-			Artifact:                 releaseArtifact(server.URL+"/client.zip", clientArchive, "client.sh"),
-			ProbeBootstrapPublicKeys: map[string]string{"primary": testPublicKeyPEM(t)},
-			PublishedAt:              time.Now().UTC(),
-		},
-		Browser: central.BrowserRelease{
-			Channel: "stable", Platform: runtime.GOOS, Arch: runtime.GOARCH, Revision: "1234",
-			CompatiblePlaywrightVersions: []string{"1.61.1"},
-			Artifact:                     releaseArtifact(server.URL+"/browser.zip", browserArchive, "browser"), PublishedAt: time.Now().UTC(),
-		},
-		Playwright: central.PlaywrightRelease{
-			Channel: "stable", Platform: runtime.GOOS, Arch: runtime.GOARCH, Version: "1.61.1",
-			Artifact: releaseArtifact(server.URL+"/driver.zip", driverArchive, "node"), PublishedAt: time.Now().UTC(),
-		},
-	}
+	release = runtimeRelease(
+		clientRelease("1.0.0", "1234", "1.61.1", releaseArtifact(server.URL+"/client.zip", clientArchive, "client.sh"), map[string]string{"primary": testPublicKeyPEM(t)}),
+		browserRelease("1234", "1.61.1", releaseArtifact(server.URL+"/browser.zip", browserArchive, "browser")),
+		playwrightRelease("1.61.1", releaseArtifact(server.URL+"/driver.zip", driverArchive, "node")),
+	)
 	dataDir := t.TempDir()
 	var output bytes.Buffer
 	var progress []Progress
@@ -152,16 +134,16 @@ func TestLauncherDownloadsVerifiesCachesAndRunsClient(t *testing.T) {
 	}
 	if !strings.Contains(output.String(), `"launchTicket":"launch-secret"`) ||
 		!strings.Contains(output.String(), `"installationId":"install_`) ||
-		!strings.Contains(output.String(), `"releaseGeneration":19`) ||
+		!strings.Contains(output.String(), `"releaseGeneration":"19"`) ||
 		!strings.Contains(output.String(), `"browserArtifactSha256":"`) ||
 		!strings.Contains(output.String(), `"playwrightVersion":"1.61.1"`) ||
 		!strings.Contains(output.String(), `"playwrightArtifactSha256":"`) {
 		t.Fatalf("client launch payload = %q", output.String())
 	}
-	if ticketRequest.ReleaseGeneration != 19 || ticketRequest.ClientVersion != "1.0.0" ||
-		ticketRequest.BrowserArtifactSHA256 != release.Browser.Artifact.SHA256 ||
-		ticketRequest.PlaywrightVersion != "1.61.1" ||
-		ticketRequest.PlaywrightArtifactSHA256 != release.Playwright.Artifact.SHA256 || ticketRequests.Load() != 3 {
+	if ticketRequest.GetContext().GetReleaseGeneration() != 19 || ticketRequest.GetContext().GetClientVersion() != "1.0.0" ||
+		ticketRequest.GetContext().GetBrowserArtifactSha256() != release.GetBrowser().GetArtifact().GetSha256() ||
+		ticketRequest.GetContext().GetPlaywrightVersion() != "1.61.1" ||
+		ticketRequest.GetContext().GetPlaywrightArtifactSha256() != release.GetPlaywright().GetArtifact().GetSha256() || ticketRequests.Load() != 3 {
 		t.Fatalf("launch ticket request = %+v", ticketRequest)
 	}
 	if artifactRequests.Load() != 3 {
@@ -190,34 +172,27 @@ func TestLauncherDownloadsVerifiesCachesAndRunsClient(t *testing.T) {
 func TestLauncherRequiresManualPortableUpdateBeforeRuntimeDownload(t *testing.T) {
 	var runtimeRequests atomic.Int32
 	server := httptest.NewTLSServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		writer.Header().Set(central.ReleaseGenerationHeader, "23")
+		writer.Header().Set("X-Cineko-Release-Generation", "23")
 		switch request.URL.Path {
 		case "/health":
-			_ = json.NewEncoder(writer).Encode(map[string]string{"status": "ready"})
+			writeProtoJSON(t, writer, serviceHealthReady())
 		case "/v1/auth/exchange":
-			_ = json.NewEncoder(writer).Encode(central.AuthExchangeResponse{ // #nosec G117 -- test-only fixture.
-				AccessToken: "session", ExpiresAt: time.Now().Add(time.Hour),
-				RefreshToken: "refresh", RefreshExpiresAt: time.Now().Add(24 * time.Hour),
-				User: central.ClientUser{ID: "user"},
-			})
+			writeProtoJSON(t, writer, authenticationResponse(time.Now(), "session"))
 		case "/v1/releases/launcher/current":
-			_ = json.NewEncoder(writer).Encode(central.LauncherRelease{
-				Channel: "stable", Platform: runtime.GOOS, Arch: runtime.GOARCH,
-				Version: "1.1.0", Protocol: central.ProtocolVersion,
-				Launcher: central.ReleaseArtifact{
-					URL:  "https://releases.example.com/cineko/launcher/v1.1.0/" + runtime.GOOS + "-" + runtime.GOARCH + "/cineko-launcher-v1.1.0.zip",
-					Size: 1, SHA256: strings.Repeat("a", 64), Executable: "Cineko Launcher",
-				},
-				PublishedAt: time.Now().UTC(),
-			})
+			writeProtoJSON(t, writer, launcherRelease("1.1.0", testArtifact(
+				"https://releases.example.com/cineko/launcher/v1.1.0/"+runtime.GOOS+"-"+runtime.GOARCH+"/cineko-launcher-v1.1.0.zip",
+				1, strings.Repeat("a", 64), "Cineko Launcher",
+			)))
 		case "/v1/releases/runtime/current":
 			runtimeRequests.Add(1)
 			http.Error(writer, "must not load runtime", http.StatusInternalServerError)
 		default:
 			if strings.HasPrefix(request.URL.Path, "/v1/devices/") {
-				var device central.ClientDevice
-				_ = json.NewDecoder(request.Body).Decode(&device)
-				_ = json.NewEncoder(writer).Encode(device)
+				device := &clientpb.Device{}
+				if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(readBody(t, request), device); err != nil {
+					t.Errorf("decode device request: %v", err)
+				}
+				writeProtoJSON(t, writer, device)
 				return
 			}
 			http.NotFound(writer, request)
@@ -229,7 +204,7 @@ func TestLauncherRequiresManualPortableUpdateBeforeRuntimeDownload(t *testing.T)
 		Version: "1.0.0", HTTPClient: server.Client(),
 	})
 	var update *LauncherUpdateRequired
-	if !errors.As(err, &update) || update.Version != "1.1.0" || !strings.HasPrefix(update.Artifact.URL, "https://releases.example.com/") {
+	if !errors.As(err, &update) || update.Version != "1.1.0" || !strings.HasPrefix(update.Artifact.GetUrl(), "https://releases.example.com/") {
 		t.Fatalf("portable Launcher update error = %v", err)
 	}
 	if runtimeRequests.Load() != 0 {
@@ -245,36 +220,27 @@ func TestLauncherPublishedDuringRuntimeRetryBlocksBeforeRetry(t *testing.T) {
 	var runtimeRequests atomic.Int32
 	var ticketRequests atomic.Int32
 	launcherVersion := "1.0.0"
-	var release central.RuntimeRelease
+	var release *releasepb.RuntimeRelease
 	server := httptest.NewTLSServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if !strings.HasSuffix(request.URL.Path, ".zip") {
-			writer.Header().Set(central.ReleaseGenerationHeader, "31")
+			writer.Header().Set("X-Cineko-Release-Generation", "31")
 		}
 		switch request.URL.Path {
 		case "/health":
-			_ = json.NewEncoder(writer).Encode(map[string]string{"status": "ready"})
+			writeProtoJSON(t, writer, serviceHealthReady())
 		case "/v1/auth/exchange":
-			_ = json.NewEncoder(writer).Encode(central.AuthExchangeResponse{ // #nosec G117 -- test fixture.
-				AccessToken: "session", ExpiresAt: time.Now().Add(time.Hour),
-				RefreshToken: "refresh", RefreshExpiresAt: time.Now().Add(24 * time.Hour),
-				User: central.ClientUser{ID: "user"},
-			})
+			writeProtoJSON(t, writer, authenticationResponse(time.Now(), "session"))
 		case "/v1/releases/launcher/current":
 			launcherChecks.Add(1)
-			_ = json.NewEncoder(writer).Encode(central.LauncherRelease{
-				Channel: "stable", Platform: runtime.GOOS, Arch: runtime.GOARCH,
-				Version: launcherVersion, Protocol: central.ProtocolVersion,
-				Launcher:    central.ReleaseArtifact{URL: "https://cdn.example/launcher.zip", Size: 1, SHA256: strings.Repeat("a", 64), Executable: "launcher"},
-				PublishedAt: time.Now().UTC(),
-			})
+			writeProtoJSON(t, writer, launcherRelease(launcherVersion, testArtifact("https://cdn.example/launcher.zip", 1, strings.Repeat("a", 64), "launcher")))
 		case "/v1/releases/runtime/current":
 			runtimeRequests.Add(1)
-			_ = json.NewEncoder(writer).Encode(release)
+			writeProtoJSON(t, writer, release)
 		case "/v1/launch-tickets":
 			ticketRequests.Add(1)
 			launcherVersion = "2.0.0"
 			writer.WriteHeader(http.StatusConflict)
-			_, _ = writer.Write([]byte(`{"error":{"code":"stale_release","message":"changed"}}`))
+			writeProtoJSON(t, writer, apiErrorResponse("stale_release", "changed"))
 		case "/client.zip":
 			_, _ = writer.Write(clientArchive)
 		case "/browser.zip":
@@ -283,31 +249,22 @@ func TestLauncherPublishedDuringRuntimeRetryBlocksBeforeRetry(t *testing.T) {
 			_, _ = writer.Write(driverArchive)
 		default:
 			if strings.HasPrefix(request.URL.Path, "/v1/devices/") {
-				var device central.ClientDevice
-				_ = json.NewDecoder(request.Body).Decode(&device)
-				_ = json.NewEncoder(writer).Encode(device)
+				device := &clientpb.Device{}
+				if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(readBody(t, request), device); err != nil {
+					t.Errorf("decode device request: %v", err)
+				}
+				writeProtoJSON(t, writer, device)
 				return
 			}
 			http.NotFound(writer, request)
 		}
 	}))
 	t.Cleanup(server.Close)
-	release = central.RuntimeRelease{
-		Client: central.ClientRelease{
-			Channel: "stable", Platform: runtime.GOOS, Arch: runtime.GOARCH, Version: "1.0.0",
-			MinimumLauncherVersion: "1.0.0", MinimumBrowserRevision: "1", PlaywrightVersion: "1.0.0", Protocol: central.ProtocolVersion,
-			Artifact:                 releaseArtifact(server.URL+"/client.zip", clientArchive, "client"),
-			ProbeBootstrapPublicKeys: map[string]string{"primary": testPublicKeyPEM(t)}, PublishedAt: time.Now().UTC(),
-		},
-		Browser: central.BrowserRelease{
-			Channel: "stable", Platform: runtime.GOOS, Arch: runtime.GOARCH, Revision: "1",
-			CompatiblePlaywrightVersions: []string{"1.0.0"}, Artifact: releaseArtifact(server.URL+"/browser.zip", browserArchive, "browser"), PublishedAt: time.Now().UTC(),
-		},
-		Playwright: central.PlaywrightRelease{
-			Channel: "stable", Platform: runtime.GOOS, Arch: runtime.GOARCH, Version: "1.0.0",
-			Artifact: releaseArtifact(server.URL+"/driver.zip", driverArchive, "node"), PublishedAt: time.Now().UTC(),
-		},
-	}
+	release = runtimeRelease(
+		clientRelease("1.0.0", "1", "1.0.0", releaseArtifact(server.URL+"/client.zip", clientArchive, "client"), map[string]string{"primary": testPublicKeyPEM(t)}),
+		browserRelease("1", "1.0.0", releaseArtifact(server.URL+"/browser.zip", browserArchive, "browser")),
+		playwrightRelease("1.0.0", releaseArtifact(server.URL+"/driver.zip", driverArchive, "node")),
+	)
 	err := Run(t.Context(), Config{
 		CentralURL: server.URL, UserID: "user", AccessToken: "credential", DataDir: t.TempDir(), Version: "1.0.0", HTTPClient: server.Client(),
 	})
@@ -381,23 +338,20 @@ func TestLauncherValidation(t *testing.T) {
 	}); len(got) != 1 || got[0] != "PATH=/bin" {
 		t.Fatalf("sanitized environment = %v", got)
 	}
-	validArtifact := central.ReleaseArtifact{
-		URL:  "https://releases.example.com/cineko/client/v1.0.0/darwin-arm64/client.zip",
-		Size: 1, SHA256: strings.Repeat("a", 64), Executable: "bin/client",
-	}
+	validArtifact := testArtifact("https://releases.example.com/cineko/client/v1.0.0/darwin-arm64/client.zip", 1, strings.Repeat("a", 64), "bin/client")
 	if err := artifact.ValidateMetadata(validArtifact); err != nil {
 		t.Fatal(err)
 	}
-	for name, mutate := range map[string]func(*central.ReleaseArtifact){
-		"insecure URL": func(value *central.ReleaseArtifact) { value.URL = "http://cdn.example/client.zip" },
-		"empty size":   func(value *central.ReleaseArtifact) { value.Size = 0 },
-		"invalid hash": func(value *central.ReleaseArtifact) { value.SHA256 = "invalid" },
-		"escaping path": func(value *central.ReleaseArtifact) {
-			value.Executable = "../client"
+	for name, mutate := range map[string]func(*releasepb.Artifact){
+		"insecure URL": func(value *releasepb.Artifact) { value.SetUrl("http://cdn.example/client.zip") },
+		"empty size":   func(value *releasepb.Artifact) { value.SetSize(0) },
+		"invalid hash": func(value *releasepb.Artifact) { value.SetSha256("invalid") },
+		"escaping path": func(value *releasepb.Artifact) {
+			value.SetExecutable("../client")
 		},
 	} {
-		value := validArtifact
-		mutate(&value)
+		value := proto.CloneOf(validArtifact)
+		mutate(value)
 		if err := artifact.ValidateMetadata(value); err == nil {
 			t.Fatalf("%s artifact accepted", name)
 		}
@@ -429,9 +383,120 @@ func zipArtifacts(t *testing.T, files map[string]string) []byte {
 	return archive.Bytes()
 }
 
-func releaseArtifact(url string, contents []byte, executable string) central.ReleaseArtifact {
+func releaseArtifact(url string, contents []byte, executable string) *releasepb.Artifact {
 	digest := sha256.Sum256(contents)
-	return central.ReleaseArtifact{
-		URL: url, Size: int64(len(contents)), SHA256: hex.EncodeToString(digest[:]), Executable: executable,
+	return testArtifact(url, int64(len(contents)), hex.EncodeToString(digest[:]), executable)
+}
+
+func testArtifact(url string, size int64, sha256 string, executable string) *releasepb.Artifact {
+	artifact := &releasepb.Artifact{}
+	artifact.SetUrl(url)
+	artifact.SetSize(size)
+	artifact.SetSha256(sha256)
+	artifact.SetExecutable(executable)
+	return artifact
+}
+
+func authenticationResponse(now time.Time, accessToken string) *clientpb.AuthenticationResponse {
+	auth := &clientpb.AuthenticationResponse{}
+	auth.SetAccessToken(accessToken)
+	auth.SetExpiresAt(timestamppb.New(now.Add(time.Hour)))
+	auth.SetRefreshToken("refresh")
+	auth.SetRefreshExpiresAt(timestamppb.New(now.Add(24 * time.Hour)))
+	user := &clientpb.User{}
+	user.SetId("user")
+	auth.SetUser(user)
+	return auth
+}
+
+func apiErrorResponse(code, message string) *commonpb.APIErrorResponse {
+	response := &commonpb.APIErrorResponse{}
+	errorValue := &commonpb.APIError{}
+	errorValue.SetCode(code)
+	errorValue.SetMessage(message)
+	errorValue.SetRequestId("test-request")
+	response.SetError(errorValue)
+	return response
+}
+
+func serviceHealthReady() *commonpb.ServiceHealth {
+	health := &commonpb.ServiceHealth{}
+	health.SetReady(&commonpb.Ready{})
+	return health
+}
+
+func launcherRelease(version string, artifact *releasepb.Artifact) *releasepb.LauncherRelease {
+	release := &releasepb.LauncherRelease{}
+	release.SetChannel("stable")
+	release.SetPlatform(runtime.GOOS)
+	release.SetArchitecture(runtime.GOARCH)
+	release.SetVersion(version)
+	release.SetLauncher(artifact)
+	release.SetPublishedAt(timestamppb.New(time.Now().UTC()))
+	return release
+}
+
+func runtimeRelease(client *releasepb.ClientRelease, browser *releasepb.BrowserRelease, playwright *releasepb.PlaywrightRelease) *releasepb.RuntimeRelease {
+	release := &releasepb.RuntimeRelease{}
+	release.SetClient(client)
+	release.SetBrowser(browser)
+	release.SetPlaywright(playwright)
+	return release
+}
+
+func clientRelease(version, minimumBrowserRevision, playwrightVersion string, artifact *releasepb.Artifact, keyring map[string]string) *releasepb.ClientRelease {
+	release := &releasepb.ClientRelease{}
+	release.SetChannel("stable")
+	release.SetPlatform(runtime.GOOS)
+	release.SetArchitecture(runtime.GOARCH)
+	release.SetVersion(version)
+	release.SetMinimumLauncherVersion("1.0.0")
+	release.SetMinimumBrowserRevision(minimumBrowserRevision)
+	release.SetPlaywrightVersion(playwrightVersion)
+	release.SetArtifact(artifact)
+	release.SetProbeBootstrapPublicKeys(keyring)
+	release.SetPublishedAt(timestamppb.New(time.Now().UTC()))
+	return release
+}
+
+func browserRelease(revision, playwrightVersion string, artifact *releasepb.Artifact) *releasepb.BrowserRelease {
+	release := &releasepb.BrowserRelease{}
+	release.SetChannel("stable")
+	release.SetPlatform(runtime.GOOS)
+	release.SetArchitecture(runtime.GOARCH)
+	release.SetRevision(revision)
+	release.SetCompatiblePlaywrightVersions([]string{playwrightVersion})
+	release.SetArtifact(artifact)
+	release.SetPublishedAt(timestamppb.New(time.Now().UTC()))
+	return release
+}
+
+func playwrightRelease(version string, artifact *releasepb.Artifact) *releasepb.PlaywrightRelease {
+	release := &releasepb.PlaywrightRelease{}
+	release.SetChannel("stable")
+	release.SetPlatform(runtime.GOOS)
+	release.SetArchitecture(runtime.GOARCH)
+	release.SetVersion(version)
+	release.SetArtifact(artifact)
+	release.SetPublishedAt(timestamppb.New(time.Now().UTC()))
+	return release
+}
+
+func writeProtoJSON(t *testing.T, writer http.ResponseWriter, message proto.Message) {
+	t.Helper()
+	contents, err := (protojson.MarshalOptions{UseProtoNames: false}).Marshal(message)
+	if err != nil {
+		t.Fatal(err)
 	}
+	writer.Header().Set("Content-Type", "application/json")
+	_, _ = writer.Write(contents)
+}
+
+func readBody(t *testing.T, request *http.Request) []byte {
+	t.Helper()
+	contents, err := io.ReadAll(request.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return contents
 }

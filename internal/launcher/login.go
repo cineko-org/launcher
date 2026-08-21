@@ -2,16 +2,16 @@ package launcher
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
-	central "github.com/cineko-org/contracts/v3"
+	clientpb "github.com/cineko-org/contracts/gen/go/cineko/client"
 	centralstore "github.com/cineko-org/launcher/internal/centralclient"
 	"github.com/cineko-org/launcher/internal/launcher/managedfiles"
+
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var (
@@ -19,16 +19,8 @@ var (
 	ErrInvalidPIN             = errors.New("PIN must contain six digits")
 )
 
-type launcherSession struct {
-	UserID           string    `json:"userId"`
-	AccessToken      string    `json:"accessToken"`
-	ExpiresAt        time.Time `json:"expiresAt"`
-	RefreshToken     string    `json:"refreshToken"`
-	RefreshExpiresAt time.Time `json:"refreshExpiresAt"`
-}
-
 func authenticateLauncher(ctx context.Context, config Config, identity identity) (*centralstore.Store, error) {
-	onSessionChanged := func(session central.AuthExchangeResponse) error {
+	onSessionChanged := func(session *clientpb.AuthenticationResponse) error {
 		return saveLauncherSession(config.DataDir, session)
 	}
 	if strings.TrimSpace(config.UserID) != "" && strings.TrimSpace(config.AccessToken) != "" {
@@ -79,16 +71,20 @@ func resumeLauncherSession(ctx context.Context, config Config) (*centralstore.St
 	if err != nil {
 		return nil, err
 	}
-	var session launcherSession
-	if json.Unmarshal(contents, &session) != nil {
+	session := &clientpb.AuthenticationResponse{}
+	if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(contents, session); err != nil {
+		return nil, errors.New("launcher session is invalid")
+	}
+	if session.GetUser() == nil || session.GetUser().GetId() == "" || session.GetAccessToken() == "" ||
+		session.GetExpiresAt() == nil || session.GetRefreshToken() == "" || session.GetRefreshExpiresAt() == nil {
 		return nil, errors.New("launcher session is invalid")
 	}
 	store, err := centralstore.Resume(centralstore.SessionConfig{
-		BaseURL: config.CentralURL, UserID: session.UserID,
-		AccessToken: session.AccessToken, ExpiresAt: session.ExpiresAt,
-		RefreshToken: session.RefreshToken, RefreshExpiresAt: session.RefreshExpiresAt,
+		BaseURL: config.CentralURL, UserID: session.GetUser().GetId(),
+		AccessToken: session.GetAccessToken(), ExpiresAt: session.GetExpiresAt().AsTime(),
+		RefreshToken: session.GetRefreshToken(), RefreshExpiresAt: session.GetRefreshExpiresAt().AsTime(),
 		HTTPClient: config.HTTPClient,
-		SessionChanged: func(session central.AuthExchangeResponse) error {
+		SessionChanged: func(session *clientpb.AuthenticationResponse) error {
 			return saveLauncherSession(config.DataDir, session)
 		},
 	})
@@ -107,11 +103,16 @@ func resumeLauncherSession(ctx context.Context, config Config) (*centralstore.St
 	return store, nil
 }
 
-func saveLauncherSession(dataDir string, value central.AuthExchangeResponse) error {
-	return managedfiles.WriteJSONAtomic(launcherSessionPath(dataDir), launcherSession{
-		UserID: value.User.ID, AccessToken: value.AccessToken, ExpiresAt: value.ExpiresAt,
-		RefreshToken: value.RefreshToken, RefreshExpiresAt: value.RefreshExpiresAt,
-	})
+func saveLauncherSession(dataDir string, value *clientpb.AuthenticationResponse) error {
+	if value == nil || value.GetUser() == nil || value.GetUser().GetId() == "" || value.GetAccessToken() == "" ||
+		value.GetExpiresAt() == nil || value.GetRefreshToken() == "" || value.GetRefreshExpiresAt() == nil {
+		return errors.New("cannot persist invalid launcher session")
+	}
+	contents, err := (protojson.MarshalOptions{UseProtoNames: false}).Marshal(value)
+	if err != nil {
+		return err
+	}
+	return managedfiles.WriteAtomic(launcherSessionPath(dataDir), contents)
 }
 
 func launcherSessionPath(dataDir string) string { return filepath.Join(dataDir, "session.json") }

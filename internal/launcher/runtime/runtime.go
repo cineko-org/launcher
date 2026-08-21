@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	central "github.com/cineko-org/contracts/v3"
+	releasepb "github.com/cineko-org/contracts/gen/go/cineko/release"
 	runtimearchive "github.com/cineko-org/launcher/internal/launcher/archive"
 	"github.com/cineko-org/launcher/internal/launcher/managedfiles"
 )
@@ -26,7 +26,7 @@ type componentIntegrity struct {
 // Component identifies one immutable runtime component and its executable.
 type Component struct {
 	Name     string
-	Artifact central.ReleaseArtifact
+	Artifact *releasepb.Artifact
 }
 
 // LoadComponent validates an installed component and returns its launch path.
@@ -34,10 +34,10 @@ func LoadComponent(root string, item Component) (string, error) {
 	if err := managedfiles.ValidateDirectory(filepath.Dir(filepath.Dir(root)), root); err != nil {
 		return "", err
 	}
-	if err := validateComponentIntegrity(root, item.Artifact.SHA256); err != nil {
+	if err := validateComponentIntegrity(root, item.Artifact.GetSha256()); err != nil {
 		return "", err
 	}
-	executable := filepath.Join(root, filepath.FromSlash(item.Artifact.Executable))
+	executable := filepath.Join(root, filepath.FromSlash(item.Artifact.GetExecutable()))
 	if err := requireExecutable(executable); err != nil {
 		return "", err
 	}
@@ -64,10 +64,10 @@ func ActivateComponent(archivePath string, root string, item Component) (string,
 		return "", err
 	}
 	defer func() { _ = os.RemoveAll(staging) }()
-	if err := runtimearchive.Extract(archivePath, item.Artifact.URL, staging); err != nil {
+	if err := runtimearchive.Extract(archivePath, item.Artifact.GetUrl(), staging); err != nil {
 		return "", err
 	}
-	if err := writeComponentIntegrity(staging, item.Artifact.SHA256); err != nil {
+	if err := writeComponentIntegrity(staging, item.Artifact.GetSha256()); err != nil {
 		return "", fmt.Errorf("record %s integrity: %w", item.Name, err)
 	}
 	if _, err := LoadComponent(staging, item); err != nil {
