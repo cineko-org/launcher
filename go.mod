@@ -5,7 +5,7 @@ go 1.26
 toolchain go1.26.6
 
 require (
-	github.com/cineko-org/contracts v0.0.0-20260821154125-38bf9ee32ce6
+	github.com/cineko-org/contracts v0.0.0-20260821175959-3ce1fdcc5641
 	github.com/wailsapp/wails/v2 v2.15.0
 	golang.org/x/mod v0.40.0
 	golang.org/x/sys v0.47.0

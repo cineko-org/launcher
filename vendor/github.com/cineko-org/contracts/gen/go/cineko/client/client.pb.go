@@ -9983,12 +9983,14 @@ const file_cineko_client_client_proto_rawDesc = "" +
 	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\flaunchTicket\x12-\n" +
 	"\fclient_nonce\x18\x02 \x01(\tB\n" +
 	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\vclientNonce\"\x10\n" +
-	"\x0eCatalogRequest\"5\n" +
-	"\x0eSeatMapRequest\x12#\n" +
-	"\rauditorium_id\x18\x01 \x01(\tR\fauditoriumId\"2\n" +
-	"\x11AuditoriumRequest\x12\x1d\n" +
+	"\x0eCatalogRequest\"A\n" +
+	"\x0eSeatMapRequest\x12/\n" +
+	"\rauditorium_id\x18\x01 \x01(\tB\n" +
+	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\fauditoriumId\">\n" +
+	"\x11AuditoriumRequest\x12)\n" +
 	"\n" +
-	"theater_id\x18\x01 \x01(\tR\ttheaterId\"R\n" +
+	"theater_id\x18\x01 \x01(\tB\n" +
+	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\ttheaterId\"R\n" +
 	"\x12AuditoriumResponse\x12<\n" +
 	"\vauditoriums\x18\x01 \x03(\v2\x1a.cineko.catalog.AuditoriumR\vauditoriumsB=Z;github.com/cineko-org/contracts/gen/go/cineko/client;clientb\beditionsp\xe9\a"
 
