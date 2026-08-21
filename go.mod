@@ -5,13 +5,15 @@ go 1.26
 toolchain go1.26.6
 
 require (
-	github.com/cineko-org/contracts/v3 v3.3.0
+	github.com/cineko-org/contracts v0.0.0-20260821175959-3ce1fdcc5641
 	github.com/wailsapp/wails/v2 v2.15.0
 	golang.org/x/mod v0.40.0
 	golang.org/x/sys v0.47.0
+	google.golang.org/protobuf v1.36.12
 )
 
 require (
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260709200747-435963d16310.1 // indirect
 	git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3 // indirect
 	github.com/bep/debounce v1.2.1 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect

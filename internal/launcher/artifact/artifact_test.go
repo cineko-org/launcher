@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	central "github.com/cineko-org/contracts/v3"
+	releasepb "github.com/cineko-org/contracts/gen/go/cineko/release"
 )
 
 func TestDefaultDownloadTimeoutIsTenMinutes(t *testing.T) {
@@ -44,12 +44,9 @@ func TestDownloadResumesAndReusesVerifiedCache(t *testing.T) {
 	}))
 	t.Cleanup(server.Close)
 	digest := sha256.Sum256(payload)
-	artifact := central.ReleaseArtifact{
-		URL: server.URL + "/cineko-client.zip", Size: int64(len(payload)),
-		SHA256: hex.EncodeToString(digest[:]), Executable: "cineko-client",
-	}
+	artifact := testArtifact(server.URL+"/cineko-client.zip", int64(len(payload)), hex.EncodeToString(digest[:]), "cineko-client")
 	cache := t.TempDir()
-	partial := filepath.Join(cache, artifact.SHA256+".blob.part")
+	partial := filepath.Join(cache, artifact.GetSha256()+".blob.part")
 	if err := os.WriteFile(partial, payload[:offset], 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -86,12 +83,9 @@ func TestDownloadRestartsWhenOriginIgnoresRange(t *testing.T) {
 		_, _ = writer.Write(payload)
 	}))
 	t.Cleanup(server.Close)
-	artifact := central.ReleaseArtifact{
-		URL: server.URL + "/client.zip", Size: int64(len(payload)),
-		SHA256: hex.EncodeToString(digest[:]), Executable: "client",
-	}
+	artifact := testArtifact(server.URL+"/client.zip", int64(len(payload)), hex.EncodeToString(digest[:]), "client")
 	cache := t.TempDir()
-	if err := os.WriteFile(filepath.Join(cache, artifact.SHA256+".blob.part"), payload[:4], 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(cache, artifact.GetSha256()+".blob.part"), payload[:4], 0o600); err != nil {
 		t.Fatal(err)
 	}
 	path, err := Download(t.Context(), server.Client(), cache, "client", artifact, nil)
@@ -113,16 +107,13 @@ func TestDownloadDoesNotFollowPartialSymlink(t *testing.T) {
 		_, _ = writer.Write(payload)
 	}))
 	t.Cleanup(server.Close)
-	artifact := central.ReleaseArtifact{
-		URL: server.URL + "/client.zip", Size: int64(len(payload)),
-		SHA256: hex.EncodeToString(digest[:]), Executable: "client",
-	}
+	artifact := testArtifact(server.URL+"/client.zip", int64(len(payload)), hex.EncodeToString(digest[:]), "client")
 	cache := t.TempDir()
 	outside := filepath.Join(t.TempDir(), "outside")
 	if err := os.WriteFile(outside, []byte("do-not-change"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	partial := filepath.Join(cache, artifact.SHA256+".blob.part")
+	partial := filepath.Join(cache, artifact.GetSha256()+".blob.part")
 	if err := os.Symlink(outside, partial); err != nil {
 		t.Fatal(err)
 	}
@@ -143,10 +134,7 @@ func TestDownloadPortableLauncherVerifiesBeforeAtomicPlacement(t *testing.T) {
 		_, _ = writer.Write(payload)
 	}))
 	t.Cleanup(server.Close)
-	artifact := central.ReleaseArtifact{
-		URL: server.URL + "/cineko-launcher.AppImage", Size: int64(len(payload)),
-		SHA256: hex.EncodeToString(digest[:]), Executable: "cineko-launcher.AppImage",
-	}
+	artifact := testArtifact(server.URL+"/cineko-launcher.AppImage", int64(len(payload)), hex.EncodeToString(digest[:]), "cineko-launcher.AppImage")
 	destination := filepath.Join(t.TempDir(), "cineko-launcher.AppImage")
 	if err := DownloadPortableLauncher(t.Context(), server.Client(), t.TempDir(), artifact, destination, nil); err != nil {
 		t.Fatal(err)
@@ -161,7 +149,7 @@ func TestDownloadPortableLauncherVerifiesBeforeAtomicPlacement(t *testing.T) {
 			t.Fatalf("AppImage mode=%v error=%v", info, err)
 		}
 	}
-	artifact.SHA256 = strings.Repeat("0", 64)
+	artifact.SetSha256(strings.Repeat("0", 64))
 	badDestination := destination + ".bad"
 	if err := DownloadPortableLauncher(t.Context(), server.Client(), t.TempDir(), artifact, badDestination, nil); err == nil {
 		t.Fatal("corrupt portable Launcher accepted")
@@ -169,6 +157,15 @@ func TestDownloadPortableLauncherVerifiesBeforeAtomicPlacement(t *testing.T) {
 	if _, err := os.Stat(badDestination); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("unverified Launcher was placed: %v", err)
 	}
+}
+
+func testArtifact(url string, size int64, sha256 string, executable string) *releasepb.Artifact {
+	artifact := &releasepb.Artifact{}
+	artifact.SetUrl(url)
+	artifact.SetSize(size)
+	artifact.SetSha256(sha256)
+	artifact.SetExecutable(executable)
+	return artifact
 }
 
 func TestContentRangeValidationIsExact(t *testing.T) {

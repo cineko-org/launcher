@@ -12,9 +12,10 @@ import (
 	"strings"
 	"testing"
 
-	central "github.com/cineko-org/contracts/v3"
+	releasepb "github.com/cineko-org/contracts/gen/go/cineko/release"
 	"github.com/cineko-org/launcher/internal/launcher/managedfiles"
 	installedruntime "github.com/cineko-org/launcher/internal/launcher/runtime"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestProbePublicKeyIDsCannotEscapeInstallDirectory(t *testing.T) {
@@ -60,18 +61,20 @@ func TestInstalledManifestRejectsMutatedComponentTree(t *testing.T) {
 
 func TestRuntimeReleaseCacheIncludesCompleteLaunchIdentity(t *testing.T) {
 	base := installedFixture(t, t.TempDir(), "a").Release
-	for name, mutate := range map[string]func(*central.RuntimeRelease){
-		"client version":     func(release *central.RuntimeRelease) { release.Client.Version = "2.0.0" },
-		"client protocol":    func(release *central.RuntimeRelease) { release.Client.Protocol++ },
-		"browser revision":   func(release *central.RuntimeRelease) { release.Browser.Revision = "2" },
-		"Playwright version": func(release *central.RuntimeRelease) { release.Playwright.Version = "2.0.0" },
-		"Probe keyring": func(release *central.RuntimeRelease) {
-			release.Client.ProbeBootstrapPublicKeys = map[string]string{"rotated": testPublicKeyPEM(t)}
+	for name, mutate := range map[string]func(*releasepb.RuntimeRelease){
+		"client version": func(release *releasepb.RuntimeRelease) { release.GetClient().SetVersion("2.0.0") },
+		"client artifact": func(release *releasepb.RuntimeRelease) {
+			release.GetClient().GetArtifact().SetSha256(strings.Repeat("b", 64))
+		},
+		"browser revision":   func(release *releasepb.RuntimeRelease) { release.GetBrowser().SetRevision("2") },
+		"Playwright version": func(release *releasepb.RuntimeRelease) { release.GetPlaywright().SetVersion("2.0.0") },
+		"Probe keyring": func(release *releasepb.RuntimeRelease) {
+			release.GetClient().SetProbeBootstrapPublicKeys(map[string]string{"rotated": testPublicKeyPEM(t)})
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			changed := base
-			mutate(&changed)
+			changed := proto.CloneOf(base)
+			mutate(changed)
 			if sameRuntimeRelease(base, changed) {
 				t.Fatal("changed launch identity reused the installed runtime")
 			}
@@ -130,10 +133,8 @@ func installedFixture(t *testing.T, dataDir string, suffix string) installedRele
 			executable = "node"
 		}
 		path, err := installedruntime.ActivateComponent(archivePath, root, installedruntime.Component{
-			Name: component,
-			Artifact: central.ReleaseArtifact{
-				URL: "https://fixtures.example/" + component + ".zip", SHA256: digest, Executable: executable,
-			},
+			Name:     component,
+			Artifact: testArtifact("https://fixtures.example/"+component+".zip", 0, digest, executable),
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -146,18 +147,24 @@ func installedFixture(t *testing.T, dataDir string, suffix string) installedRele
 		t.Fatal(err)
 	}
 	return installedRelease{
-		Release: central.RuntimeRelease{
-			Client: central.ClientRelease{
-				Artifact:                 central.ReleaseArtifact{SHA256: digest, Executable: "client"},
-				ProbeBootstrapPublicKeys: keyring,
-			},
-			Browser: central.BrowserRelease{
-				Artifact: central.ReleaseArtifact{SHA256: digest, Executable: "browser"},
-			},
-			Playwright: central.PlaywrightRelease{
-				Artifact: central.ReleaseArtifact{SHA256: digest, Executable: "node"},
-			},
-		},
+		Release: runtimeRelease(
+			func() *releasepb.ClientRelease {
+				release := &releasepb.ClientRelease{}
+				release.SetArtifact(testArtifact("", 0, digest, "client"))
+				release.SetProbeBootstrapPublicKeys(keyring)
+				return release
+			}(),
+			func() *releasepb.BrowserRelease {
+				release := &releasepb.BrowserRelease{}
+				release.SetArtifact(testArtifact("", 0, digest, "browser"))
+				return release
+			}(),
+			func() *releasepb.PlaywrightRelease {
+				release := &releasepb.PlaywrightRelease{}
+				release.SetArtifact(testArtifact("", 0, digest, "node"))
+				return release
+			}(),
+		),
 		ClientPath: paths["client"], BrowserPath: paths["browser"], DriverPath: paths["playwright"],
 		ProbePublicKeyHash: keyHash, ProbePublicKeySpec: keySpec,
 	}

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	central "github.com/cineko-org/contracts/v3"
+	releasepb "github.com/cineko-org/contracts/gen/go/cineko/release"
 	centralstore "github.com/cineko-org/launcher/internal/centralclient"
 	"github.com/cineko-org/launcher/internal/launcher"
 )
@@ -50,8 +50,10 @@ func TestLauncherPublishesTypedAuthenticationFailures(t *testing.T) {
 
 func TestLauncherPublishesPortableUpdate(t *testing.T) {
 	app := New(launcher.Config{Version: "1.2.3"}, nil)
+	artifact := &releasepb.Artifact{}
+	artifact.SetUrl("https://cdn.example/launcher.zip")
 	app.publishFailure(launcher.Config{Version: "1.2.3"}, &launcher.LauncherUpdateRequired{
-		Version: "1.3.0", Artifact: central.ReleaseArtifact{URL: "https://cdn.example/launcher.zip"},
+		Version: "1.3.0", Artifact: artifact,
 	})
 	state := app.State()
 	if state.Mode != ModeLauncherUpdate || state.LatestVersion != "1.3.0" ||

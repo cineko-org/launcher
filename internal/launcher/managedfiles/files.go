@@ -84,6 +84,11 @@ func WriteJSONAtomic(path string, value any) error {
 	if err != nil {
 		return fmt.Errorf("encode %s: %w", filepath.Base(path), err)
 	}
+	return WriteAtomic(path, contents)
+}
+
+// WriteAtomic writes contents and atomically replaces its destination.
+func WriteAtomic(path string, contents []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return fmt.Errorf("create %s directory: %w", filepath.Base(path), err)
 	}

@@ -115,7 +115,7 @@ func (app *Launcher) DownloadLauncher() error {
 	if ctx == nil || state.Mode != ModeLauncherUpdate || update == nil || state.DownloadURL == "" {
 		return errors.New("Launcher download is unavailable")
 	}
-	parsed, err := url.Parse(update.Artifact.URL)
+	parsed, err := url.Parse(update.Artifact.GetUrl())
 	if err != nil {
 		return err
 	}
@@ -128,14 +128,14 @@ func (app *Launcher) DownloadLauncher() error {
 	}
 	app.publish(State{
 		Mode: ModeUpdating, Stage: launcher.StageDownloading, Message: "새 Launcher 다운로드 중",
-		Artifact: "launcher", Version: config.Version, Total: update.Artifact.Size,
+		Artifact: "launcher", Version: config.Version, Total: update.Artifact.GetSize(),
 	})
 	if err := launcherartifact.DownloadPortableLauncher(
 		ctx, config.HTTPClient, filepath.Join(config.DataDir, "downloads"), update.Artifact, destination,
 		func(downloaded int64) {
 			app.publish(State{
 				Mode: ModeUpdating, Stage: launcher.StageDownloading, Message: "새 Launcher 다운로드 중",
-				Artifact: "launcher", Version: config.Version, Downloaded: downloaded, Total: update.Artifact.Size,
+				Artifact: "launcher", Version: config.Version, Downloaded: downloaded, Total: update.Artifact.GetSize(),
 			})
 		},
 	); err != nil {
@@ -147,7 +147,7 @@ func (app *Launcher) DownloadLauncher() error {
 	app.mu.Unlock()
 	app.publish(State{
 		Mode: ModeLauncherUpdate, Message: "새 Launcher를 저장했습니다. 현재 Launcher를 종료한 뒤 실행하세요.",
-		Version: config.Version, LatestVersion: update.Version, DownloadURL: update.Artifact.URL,
+		Version: config.Version, LatestVersion: update.Version, DownloadURL: update.Artifact.GetUrl(),
 	})
 	if err := revealFile(ctx, destination); err != nil {
 		if app.logger != nil {
@@ -211,7 +211,7 @@ func (app *Launcher) publishFailure(config launcher.Config, err error) {
 		app.mu.Unlock()
 		app.publish(State{
 			Mode: ModeLauncherUpdate, Message: "계속하려면 새 Launcher를 내려받아 실행하세요.",
-			Version: config.Version, LatestVersion: update.Version, DownloadURL: update.Artifact.URL,
+			Version: config.Version, LatestVersion: update.Version, DownloadURL: update.Artifact.GetUrl(),
 		})
 	case errors.Is(err, launcher.ErrAuthenticationRequired):
 		app.publish(State{Mode: ModeLogin, Message: "6자리 PIN을 입력하세요", Version: config.Version})
