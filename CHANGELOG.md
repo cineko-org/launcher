@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.3](https://github.com/cineko-org/launcher/compare/v1.3.2...v1.3.3) (2026-08-22)
+
+
+### Bug Fixes
+
+* use latest Central contracts ([#29](https://github.com/cineko-org/launcher/issues/29)) ([8ccc65a](https://github.com/cineko-org/launcher/commit/8ccc65a7a18a52bc3f225c54aae8529e796f0c04))
+
 ## [1.3.2](https://github.com/cineko-org/launcher/compare/v1.3.1...v1.3.2) (2026-08-22)
 
 
