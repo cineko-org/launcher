@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	releasepb "github.com/cineko-org/contracts/gen/go/cineko/release"
+	releasepb "github.com/cineko-org/contracts/v3/gen/go/cineko/release"
 	runtimearchive "github.com/cineko-org/launcher/internal/launcher/archive"
 	"github.com/cineko-org/launcher/internal/launcher/managedfiles"
 )

@@ -13,7 +13,7 @@ import (
 	"sort"
 	"strings"
 
-	releasepb "github.com/cineko-org/contracts/gen/go/cineko/release"
+	releasepb "github.com/cineko-org/contracts/v3/gen/go/cineko/release"
 	bootstrap "github.com/cineko-org/launcher/internal/keys"
 	"github.com/cineko-org/launcher/internal/launcher/artifact"
 	"github.com/cineko-org/launcher/internal/launcher/managedfiles"

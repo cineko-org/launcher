@@ -26,6 +26,7 @@ This inventory records externally observable behavior. Deployment topology, host
 | Launcher release | `GET /v1/releases/launcher/current` | Stable channel and current platform/architecture | Continue or require manual portable update | Invalid metadata is terminal |
 | Runtime release | `GET /v1/releases/runtime/current` | Stable compatible Client, browser, and Playwright set | Verify/install exact set | Release changes restart preparation, at most three times |
 | Launch ticket | `POST /v1/launch-tickets` | Exact generation and component identities | Single-use launch envelope | Nonce is the idempotency key; stale release restarts preparation |
+| Publish portable Launcher set | `POST /v1/release-registry/launcher` | Repository release token and all three generated `LauncherRelease` platform messages | Empty generated Proto response and positive release-generation header | Network and server failures retry at most four times; client errors are terminal |
 
 ## Local mutations and rollback
 
@@ -60,5 +61,6 @@ Modes are `checking`, `login`, `updating`, `launcher-update`, `launching`, and `
 - The macOS release is signed with the repository-scoped Developer ID Application identity, submitted to Apple notarization with a 10-minute timeout, stapled, and assessed before its final ZIP is created. The final ZIP is then extracted and its signature, ticket, and Gatekeeper assessment are verified again.
 - macOS signing credentials are read only from repository secrets and are imported into an ephemeral keychain. Secret values are never printed and the keychain is deleted after the job.
 - Checksums, GitHub Release upload, and Central registration consume the final stapled ZIP, never the unsigned submission bundle.
+- Launcher registration constructs, validates, and parses only the latest generated release/service Proto messages. The release generation is transport metadata in the response header, not a response-body field.
 - Release artifacts require HTTPS metadata, positive size, clean executable path, exact SHA-256, bounded archive expansion, and verified installed tree hashes. ZIP and TAR may preserve relative symbolic links only when every resolved target stays inside the extracted component; absolute, escaping, cyclic, or link-parent paths fail before extraction writes files.
 - `scripts/verify-behavior-contract.sh` fails when a Launcher/Central service point or state literal appears in source without this inventory.

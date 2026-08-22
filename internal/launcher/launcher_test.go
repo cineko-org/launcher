@@ -23,9 +23,9 @@ import (
 	"testing"
 	"time"
 
-	clientpb "github.com/cineko-org/contracts/gen/go/cineko/client"
-	commonpb "github.com/cineko-org/contracts/gen/go/cineko/common"
-	releasepb "github.com/cineko-org/contracts/gen/go/cineko/release"
+	clientpb "github.com/cineko-org/contracts/v3/gen/go/cineko/client"
+	commonpb "github.com/cineko-org/contracts/v3/gen/go/cineko/common"
+	releasepb "github.com/cineko-org/contracts/v3/gen/go/cineko/release"
 	"github.com/cineko-org/launcher/internal/launcher/artifact"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
