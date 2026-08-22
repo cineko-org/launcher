@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.2](https://github.com/cineko-org/launcher/compare/v1.3.1...v1.3.2) (2026-08-22)
+
+
+### Bug Fixes
+
+* register Launcher releases with generated protobuf ([#27](https://github.com/cineko-org/launcher/issues/27)) ([4c1758e](https://github.com/cineko-org/launcher/commit/4c1758e4c8a4d8cf39d936ca1dc39fe7de11ccf9))
+
 ## [1.3.1](https://github.com/cineko-org/launcher/compare/v1.3.0...v1.3.1) (2026-08-22)
 
 
