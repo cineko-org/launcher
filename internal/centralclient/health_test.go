@@ -2,14 +2,17 @@ package centralclient
 
 import (
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	clientpb "github.com/cineko-org/contracts/v3/gen/go/cineko/client"
 	commonpb "github.com/cineko-org/contracts/v3/gen/go/cineko/common"
+	servicepb "github.com/cineko-org/contracts/v3/gen/go/cineko/service"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -23,16 +26,27 @@ func TestResumedSessionPersistsRotatedRefreshToken(t *testing.T) {
 		releaseGeneration(writer, "7")
 		switch request.URL.Path {
 		case "/v1/auth/refresh":
-			writeProtoJSON(t, writer, authenticationResponse(now, "new-access", "new-refresh"))
+			response := &servicepb.RefreshTokenResponse{}
+			response.SetAuthentication(authenticationResponse(now, "new-access", "new-refresh"))
+			writeProtoJSON(t, writer, response)
 		case "/v1/client/bootstrap":
 			if request.Header.Get("Authorization") != "Bearer new-access" {
 				t.Errorf("bootstrap authorization = %q", request.Header.Get("Authorization"))
+			}
+			body, err := io.ReadAll(request.Body)
+			if err != nil {
+				t.Errorf("read bootstrap request body: %v", err)
+			}
+			if request.URL.Query().Get("installationId") != "installation" || len(body) != 0 {
+				t.Errorf("bootstrap request = %s body=%q", request.URL.String(), body)
 			}
 			bootstrap := &clientpb.Bootstrap{}
 			user := &clientpb.User{}
 			user.SetId("user")
 			bootstrap.SetUser(user)
-			writeProtoJSON(t, writer, bootstrap)
+			response := &servicepb.BootstrapResponse{}
+			response.SetBootstrap(bootstrap)
+			writeProtoJSON(t, writer, response)
 		default:
 			http.NotFound(writer, request)
 		}
@@ -46,7 +60,7 @@ func TestResumedSessionPersistsRotatedRefreshToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := store.ValidateSession(t.Context()); err != nil {
+	if err := store.ValidateSession(t.Context(), "installation"); err != nil {
 		t.Fatal(err)
 	}
 	if persisted.GetRefreshToken() != "new-refresh" || store.Session().GetRefreshToken() != "new-refresh" {
@@ -62,7 +76,9 @@ func TestRefreshPersistenceFailureKeepsPreviousSessionAndStopsRequest(t *testing
 		releaseGeneration(writer, "7")
 		switch request.URL.Path {
 		case "/v1/auth/refresh":
-			writeProtoJSON(t, writer, authenticationResponse(now, "new-access", "new-refresh"))
+			response := &servicepb.RefreshTokenResponse{}
+			response.SetAuthentication(authenticationResponse(now, "new-access", "new-refresh"))
+			writeProtoJSON(t, writer, response)
 		case "/v1/client/bootstrap":
 			bootstrapCalls.Add(1)
 		default:
@@ -78,7 +94,7 @@ func TestRefreshPersistenceFailureKeepsPreviousSessionAndStopsRequest(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := store.ValidateSession(t.Context()); err == nil {
+	if err := store.ValidateSession(t.Context(), "installation"); err == nil {
 		t.Fatal("refresh persistence failure was ignored")
 	}
 	if bootstrapCalls.Load() != 0 {
@@ -131,6 +147,70 @@ func TestCheckHealthRequiresReadyCentral(t *testing.T) {
 	t.Cleanup(server.Close)
 	if err := CheckHealth(t.Context(), server.URL, server.Client()); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestGeneratedRequestAndResponseValidation(t *testing.T) {
+	t.Parallel()
+	var requests atomic.Int32
+	server := httptest.NewTLSServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		requests.Add(1)
+		releaseGeneration(writer, "7")
+		_, _ = writer.Write([]byte("{}"))
+	}))
+	t.Cleanup(server.Close)
+	store, err := newStore(server.URL, "", server.Client())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.doRequest(
+		t.Context(), http.MethodPut, "/invalid", "", &servicepb.UpsertDeviceRequest{},
+		&servicepb.UpsertDeviceResponse{}, nil,
+	); err == nil || !strings.Contains(err.Error(), "validate Central request") {
+		t.Fatalf("invalid generated request error = %v", err)
+	}
+	if requests.Load() != 0 {
+		t.Fatalf("invalid generated request reached network: %d", requests.Load())
+	}
+	if err := store.doRequest(
+		t.Context(), http.MethodGet, "/health", "", nil, &commonpb.ServiceHealth{}, nil,
+	); err == nil || !strings.Contains(err.Error(), "validate Central response") {
+		t.Fatalf("invalid generated response error = %v", err)
+	}
+}
+
+func TestQueryRequestValidationStopsInvalidGETs(t *testing.T) {
+	t.Parallel()
+	var requests atomic.Int32
+	server := httptest.NewTLSServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		requests.Add(1)
+		releaseGeneration(writer, "7")
+		_, _ = writer.Write([]byte("{}"))
+	}))
+	t.Cleanup(server.Close)
+	store, err := newStore(server.URL, "user", server.Client())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, call := range map[string]func() error{
+		"bootstrap": func() error { return store.ValidateSession(t.Context(), "") },
+		"runtime release": func() error {
+			_, err := store.CurrentRuntimeRelease(t.Context(), "", "amd64")
+			return err
+		},
+		"Launcher release": func() error {
+			_, err := store.CurrentLauncherRelease(t.Context(), "linux", "")
+			return err
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := call(); err == nil || !strings.Contains(err.Error(), "validate Central request") {
+				t.Fatalf("invalid query request error = %v", err)
+			}
+		})
+	}
+	if requests.Load() != 0 {
+		t.Fatalf("invalid query request reached network: %d", requests.Load())
 	}
 }
 

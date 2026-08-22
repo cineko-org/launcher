@@ -15,9 +15,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"buf.build/go/protovalidate"
 	clientpb "github.com/cineko-org/contracts/v3/gen/go/cineko/client"
 	commonpb "github.com/cineko-org/contracts/v3/gen/go/cineko/common"
 	releasepb "github.com/cineko-org/contracts/v3/gen/go/cineko/release"
+	servicepb "github.com/cineko-org/contracts/v3/gen/go/cineko/service"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -88,15 +90,17 @@ func Open(ctx context.Context, config Config) (*Store, error) {
 	if store.userID == "" || strings.TrimSpace(config.AccessToken) == "" {
 		return nil, errors.New("central user ID and access token are required")
 	}
-	input := &clientpb.TokenExchangeRequest{}
-	input.SetUserId(store.userID)
-	input.SetAccessToken(strings.TrimSpace(config.AccessToken))
-	auth := &clientpb.AuthenticationResponse{}
-	err = store.request(ctx, http.MethodPost, "/v1/auth/exchange", false, input, auth, nil)
+	credential := &clientpb.TokenExchangeRequest{}
+	credential.SetUserId(store.userID)
+	credential.SetAccessToken(strings.TrimSpace(config.AccessToken))
+	input := &servicepb.ExchangeTokenRequest{}
+	input.SetRequest(credential)
+	output := &servicepb.ExchangeTokenResponse{}
+	err = store.request(ctx, http.MethodPost, "/v1/auth/exchange", false, input, output, nil)
 	if err != nil {
 		return nil, fmt.Errorf("authenticate with Central: %w", err)
 	}
-	if err := store.acceptSession(auth); err != nil {
+	if err := store.acceptSession(output.GetAuthentication()); err != nil {
 		return nil, errors.New("central returned an invalid Client session")
 	}
 	return store, nil
@@ -108,20 +112,23 @@ func OpenPIN(ctx context.Context, config PINConfig) (*Store, error) {
 		return nil, err
 	}
 	store.sessionChanged = config.SessionChanged
-	input := &clientpb.PinExchangeRequest{}
-	input.SetPin(config.PIN)
-	input.SetInstallationId(config.InstallationID)
-	input.SetDeviceId(config.DeviceID)
-	auth := &clientpb.AuthenticationResponse{}
-	err = store.request(ctx, http.MethodPost, "/v1/auth/pin", false, input, auth, nil)
+	pin := &clientpb.PinExchangeRequest{}
+	pin.SetPin(config.PIN)
+	pin.SetInstallationId(config.InstallationID)
+	pin.SetDeviceId(config.DeviceID)
+	input := &servicepb.ExchangePinRequest{}
+	input.SetRequest(pin)
+	output := &servicepb.ExchangePinResponse{}
+	err = store.request(ctx, http.MethodPost, "/v1/auth/pin", false, input, output, nil)
 	if err != nil {
 		if errors.Is(err, errUnauthorized) {
 			return nil, ErrPINInvalid
 		}
 		return nil, fmt.Errorf("authenticate PIN with Central: %w", err)
 	}
-	store.userID = strings.TrimSpace(auth.GetUser().GetId())
-	if store.userID == "" || store.acceptSession(auth) != nil {
+	authentication := output.GetAuthentication()
+	store.userID = strings.TrimSpace(authentication.GetUser().GetId())
+	if store.userID == "" || store.acceptSession(authentication) != nil {
 		return nil, errors.New("central returned an invalid PIN session")
 	}
 	return store, nil
@@ -160,11 +167,18 @@ func Resume(config SessionConfig) (*Store, error) {
 	return store, nil
 }
 
-func (store *Store) ValidateSession(ctx context.Context) error {
-	bootstrap := &clientpb.Bootstrap{}
-	if err := store.request(ctx, http.MethodGet, "/v1/client/bootstrap", true, nil, bootstrap, nil); err != nil {
+func (store *Store) ValidateSession(ctx context.Context, installationID string) error {
+	input := &servicepb.BootstrapRequest{}
+	input.SetInstallationId(strings.TrimSpace(installationID))
+	if err := validateCentralRequest(input); err != nil {
 		return err
 	}
+	query := url.Values{"installationId": {input.GetInstallationId()}}
+	output := &servicepb.BootstrapResponse{}
+	if err := store.request(ctx, http.MethodGet, "/v1/client/bootstrap?"+query.Encode(), true, nil, output, nil); err != nil {
+		return err
+	}
+	bootstrap := output.GetBootstrap()
 	if bootstrap.GetUser().GetId() != store.userID {
 		return errors.New("central session user mismatch")
 	}
@@ -188,22 +202,42 @@ func (store *Store) Session() *clientpb.AuthenticationResponse {
 func (store *Store) Close() error { return nil }
 
 func (store *Store) Logout(ctx context.Context) error {
-	return store.request(ctx, http.MethodPost, "/v1/auth/logout", true, nil, nil, nil)
+	return store.request(
+		ctx, http.MethodPost, "/v1/auth/logout", true,
+		&servicepb.LogoutRequest{}, &servicepb.LogoutResponse{}, nil,
+	)
 }
 
 func (store *Store) RegisterDevice(ctx context.Context, device *clientpb.Device) (*clientpb.Device, error) {
-	registered := &clientpb.Device{}
+	input := &servicepb.UpsertDeviceRequest{}
+	input.SetDevice(device)
+	output := &servicepb.UpsertDeviceResponse{}
 	err := store.request(
-		ctx, http.MethodPut, "/v1/devices/"+url.PathEscape(device.GetInstallationId()), true, device, registered, nil,
+		ctx, http.MethodPut, "/v1/devices/"+url.PathEscape(device.GetInstallationId()), true, input, output, nil,
 	)
-	return registered, err
+	if err != nil {
+		return nil, err
+	}
+	if output.GetDevice() == nil {
+		return nil, errors.New("central returned an empty device response")
+	}
+	return output.GetDevice(), nil
 }
 
 func (store *Store) CurrentRuntimeRelease(ctx context.Context, platform, arch string) (*releasepb.RuntimeRelease, error) {
-	query := url.Values{"channel": {"stable"}, "platform": {platform}, "arch": {arch}}
-	release := &releasepb.RuntimeRelease{}
-	err := store.request(ctx, http.MethodGet, "/v1/releases/runtime/current?"+query.Encode(), true, nil, release, nil)
-	return release, err
+	input := &servicepb.GetRuntimeReleaseRequest{}
+	path, err := currentReleasePath("/v1/releases/runtime/current", input, platform, arch)
+	if err != nil {
+		return nil, err
+	}
+	output := &servicepb.GetRuntimeReleaseResponse{}
+	if err := store.request(ctx, http.MethodGet, path, true, nil, output, nil); err != nil {
+		return nil, err
+	}
+	if output.GetRelease() == nil {
+		return nil, errors.New("central returned an empty runtime release response")
+	}
+	return output.GetRelease(), nil
 }
 
 func (store *Store) CurrentLauncherRelease(
@@ -211,10 +245,44 @@ func (store *Store) CurrentLauncherRelease(
 	platform string,
 	arch string,
 ) (*releasepb.LauncherRelease, error) {
-	query := url.Values{"channel": {"stable"}, "platform": {platform}, "arch": {arch}}
-	release := &releasepb.LauncherRelease{}
-	err := store.request(ctx, http.MethodGet, "/v1/releases/launcher/current?"+query.Encode(), true, nil, release, nil)
-	return release, err
+	input := &servicepb.GetLauncherReleaseRequest{}
+	path, err := currentReleasePath("/v1/releases/launcher/current", input, platform, arch)
+	if err != nil {
+		return nil, err
+	}
+	output := &servicepb.GetLauncherReleaseResponse{}
+	if err := store.request(ctx, http.MethodGet, path, true, nil, output, nil); err != nil {
+		return nil, err
+	}
+	if output.GetRelease() == nil {
+		return nil, errors.New("central returned an empty Launcher release response")
+	}
+	return output.GetRelease(), nil
+}
+
+type currentReleaseRequest interface {
+	proto.Message
+	GetChannel() string
+	GetPlatform() string
+	GetArchitecture() string
+	SetChannel(string)
+	SetPlatform(string)
+	SetArchitecture(string)
+}
+
+func currentReleasePath(path string, input currentReleaseRequest, platform, architecture string) (string, error) {
+	input.SetChannel("stable")
+	input.SetPlatform(platform)
+	input.SetArchitecture(architecture)
+	if err := validateCentralRequest(input); err != nil {
+		return "", err
+	}
+	query := url.Values{
+		"channel":      {input.GetChannel()},
+		"platform":     {input.GetPlatform()},
+		"architecture": {input.GetArchitecture()},
+	}
+	return path + "?" + query.Encode(), nil
 }
 
 func (store *Store) ReleaseGeneration() int64 {
@@ -225,11 +293,19 @@ func (store *Store) IssueLaunchTicket(
 	ctx context.Context,
 	request *clientpb.LaunchTicketRequest,
 ) (*clientpb.LaunchTicketResponse, error) {
-	response := &clientpb.LaunchTicketResponse{}
-	err := store.request(ctx, http.MethodPost, "/v1/launch-tickets", true, request, response, map[string]string{
+	input := &servicepb.CreateLaunchTicketRequest{}
+	input.SetRequest(request)
+	output := &servicepb.CreateLaunchTicketResponse{}
+	err := store.request(ctx, http.MethodPost, "/v1/launch-tickets", true, input, output, map[string]string{
 		"Idempotency-Key": request.GetNonce(),
 	})
-	return response, err
+	if err != nil {
+		return nil, err
+	}
+	if output.GetResponse() == nil {
+		return nil, errors.New("central returned an empty launch ticket response")
+	}
+	return output.GetResponse(), nil
 }
 
 func newStore(rawURL, userID string, client *http.Client) (*Store, error) {
@@ -274,26 +350,9 @@ func (store *Store) doRequest(
 	input, output proto.Message,
 	headers map[string]string,
 ) error {
-	var body io.Reader
-	if input != nil {
-		encoded, err := (protojson.MarshalOptions{UseProtoNames: false}).Marshal(input)
-		if err != nil {
-			return fmt.Errorf("encode Central request: %w", err)
-		}
-		body = bytes.NewReader(encoded)
-	}
-	request, err := http.NewRequestWithContext(ctx, method, store.baseURL+path, body)
+	request, err := store.newHTTPRequest(ctx, method, path, token, input, headers)
 	if err != nil {
-		return fmt.Errorf("create Central request: %w", err)
-	}
-	if input != nil {
-		request.Header.Set("Content-Type", "application/json")
-	}
-	if token != "" {
-		request.Header.Set("Authorization", "Bearer "+token)
-	}
-	for name, value := range headers {
-		request.Header.Set(name, value)
+		return err
 	}
 	response, err := store.client.Do(request)
 	if err != nil {
@@ -313,6 +372,50 @@ func (store *Store) doRequest(
 	if err := responseStatusError(response.StatusCode, contents); err != nil {
 		return err
 	}
+	return decodeCentralResponse(contents, output)
+}
+
+func (store *Store) newHTTPRequest(
+	ctx context.Context,
+	method, path, token string,
+	input proto.Message,
+	headers map[string]string,
+) (*http.Request, error) {
+	body, err := encodeCentralRequest(input)
+	if err != nil {
+		return nil, err
+	}
+	request, err := http.NewRequestWithContext(ctx, method, store.baseURL+path, body)
+	if err != nil {
+		return nil, fmt.Errorf("create Central request: %w", err)
+	}
+	if input != nil {
+		request.Header.Set("Content-Type", "application/json")
+	}
+	if token != "" {
+		request.Header.Set("Authorization", "Bearer "+token)
+	}
+	for name, value := range headers {
+		request.Header.Set(name, value)
+	}
+	return request, nil
+}
+
+func encodeCentralRequest(input proto.Message) (io.Reader, error) {
+	if input == nil {
+		return nil, nil
+	}
+	if err := validateCentralRequest(input); err != nil {
+		return nil, err
+	}
+	encoded, err := (protojson.MarshalOptions{UseProtoNames: false}).Marshal(input)
+	if err != nil {
+		return nil, fmt.Errorf("encode Central request: %w", err)
+	}
+	return bytes.NewReader(encoded), nil
+}
+
+func decodeCentralResponse(contents []byte, output proto.Message) error {
 	if output == nil {
 		if len(bytes.TrimSpace(contents)) != 0 {
 			return errors.New("central returned an unexpected response body")
@@ -321,6 +424,16 @@ func (store *Store) doRequest(
 	}
 	if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(contents, output); err != nil {
 		return fmt.Errorf("decode Central response: %w", err)
+	}
+	if err := protovalidate.Validate(output); err != nil {
+		return fmt.Errorf("validate Central response: %w", err)
+	}
+	return nil
+}
+
+func validateCentralRequest(input proto.Message) error {
+	if err := protovalidate.Validate(input); err != nil {
+		return fmt.Errorf("validate Central request: %w", err)
 	}
 	return nil
 }
@@ -358,14 +471,16 @@ func (store *Store) sessionToken(ctx context.Context, forceRefresh bool) (string
 	if store.refreshToken == "" || !store.refreshExpiresAt.After(now) {
 		return "", errUnauthorized
 	}
-	input := &clientpb.TokenRefreshRequest{}
-	input.SetRefreshToken(store.refreshToken)
-	auth := &clientpb.AuthenticationResponse{}
-	err := store.doRequest(ctx, http.MethodPost, "/v1/auth/refresh", "", input, auth, nil)
+	refresh := &clientpb.TokenRefreshRequest{}
+	refresh.SetRefreshToken(store.refreshToken)
+	input := &servicepb.RefreshTokenRequest{}
+	input.SetRequest(refresh)
+	output := &servicepb.RefreshTokenResponse{}
+	err := store.doRequest(ctx, http.MethodPost, "/v1/auth/refresh", "", input, output, nil)
 	if err != nil {
 		return "", fmt.Errorf("refresh Central session: %w", err)
 	}
-	if err := store.acceptSessionLocked(auth, now); err != nil {
+	if err := store.acceptSessionLocked(output.GetAuthentication(), now); err != nil {
 		return "", err
 	}
 	return store.accessToken, nil

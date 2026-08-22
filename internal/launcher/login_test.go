@@ -9,40 +9,57 @@ import (
 	"time"
 
 	clientpb "github.com/cineko-org/contracts/v3/gen/go/cineko/client"
+	servicepb "github.com/cineko-org/contracts/v3/gen/go/cineko/service"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func TestLauncherAuthenticatesWithPINAndResumesSession(t *testing.T) {
 	now := time.Now().UTC()
 	exchanges := 0
+	dataDir := t.TempDir()
+	launcherIdentity, err := loadOrCreateIdentity(dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	centralServer := httptest.NewTLSServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("X-Cineko-Release-Generation", "11")
 		switch request.URL.Path {
 		case "/v1/auth/pin":
 			exchanges++
-			input := &clientpb.PinExchangeRequest{}
+			input := &servicepb.ExchangePinRequest{}
 			if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(readBody(t, request), input); err != nil {
 				t.Fatalf("decode PIN request: %v", err)
 			}
-			if input.GetPin() != "123456" || input.GetInstallationId() != "install_1234567890" ||
-				input.GetDeviceId() != "device_123456789012" {
+			if input.GetRequest().GetPin() != "123456" || input.GetRequest().GetInstallationId() != launcherIdentity.InstallationID ||
+				input.GetRequest().GetDeviceId() != launcherIdentity.DeviceID {
 				writer.WriteHeader(http.StatusUnauthorized)
 				return
 			}
-			writeProtoJSON(t, writer, authenticationResponse(now, "access"))
+			response := &servicepb.ExchangePinResponse{}
+			response.SetAuthentication(authenticationResponse(now, "access"))
+			writeProtoJSON(t, writer, response)
 		case "/v1/client/bootstrap":
+			if request.URL.Query().Get("installationId") != launcherIdentity.InstallationID {
+				t.Errorf("bootstrap installationId = %q", request.URL.Query().Get("installationId"))
+			}
 			bootstrap := &clientpb.Bootstrap{}
 			user := &clientpb.User{}
 			user.SetId("user")
 			bootstrap.SetUser(user)
-			writeProtoJSON(t, writer, bootstrap)
+			response := &servicepb.BootstrapResponse{}
+			response.SetBootstrap(bootstrap)
+			writeProtoJSON(t, writer, response)
+		case "/v1/auth/logout":
+			input := &servicepb.LogoutRequest{}
+			if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(readBody(t, request), input); err != nil {
+				t.Fatalf("decode logout request: %v", err)
+			}
+			writeProtoJSON(t, writer, &servicepb.LogoutResponse{})
 		default:
 			http.NotFound(writer, request)
 		}
 	}))
 	t.Cleanup(centralServer.Close)
-	dataDir := t.TempDir()
-	launcherIdentity := identity{InstallationID: "install_1234567890", DeviceID: "device_123456789012"}
 	config := Config{
 		CentralURL: centralServer.URL, DataDir: dataDir, PIN: "123456", HTTPClient: centralServer.Client(),
 	}

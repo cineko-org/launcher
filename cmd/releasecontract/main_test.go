@@ -13,8 +13,10 @@ import (
 	"testing"
 	"time"
 
+	"buf.build/go/protovalidate"
 	commonpb "github.com/cineko-org/contracts/v3/gen/go/cineko/common"
 	releasepb "github.com/cineko-org/contracts/v3/gen/go/cineko/release"
+	servicepb "github.com/cineko-org/contracts/v3/gen/go/cineko/service"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -48,17 +50,25 @@ func TestGeneratedLauncherReleaseSet(t *testing.T) {
 }
 
 func TestPublishLauncherRelease(t *testing.T) {
-	_, payload := testReleaseSet(t)
+	_, setPayload := testReleaseSet(t)
+	payload := launcherPublishPayload(t, setPayload)
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.Header.Get("Authorization") != "Bearer publisher" || request.Header.Get("Content-Type") != "application/json" {
 			t.Errorf("request headers = %v", request.Header)
 		}
-		set := &releasepb.LauncherReleaseSet{}
-		if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(readBody(t, request), set); err != nil {
+		input := &servicepb.PublishLauncherRequest{}
+		if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(readBody(t, request), input); err != nil {
 			t.Errorf("decode request: %v", err)
+		}
+		if err := protovalidate.Validate(input); err != nil {
+			t.Errorf("validate request: %v", err)
+		}
+		if len(input.GetReleaseSet().GetReleases()) != 3 {
+			t.Errorf("published Launcher releases = %d", len(input.GetReleaseSet().GetReleases()))
 		}
 		writer.Header().Set("X-Cineko-Release-Generation", "23")
 		writer.WriteHeader(http.StatusCreated)
+		_, _ = writer.Write([]byte("{}"))
 	}))
 	defer server.Close()
 
@@ -68,7 +78,8 @@ func TestPublishLauncherRelease(t *testing.T) {
 }
 
 func TestPublishLauncherReleaseRetriesOnlyServerFailures(t *testing.T) {
-	_, payload := testReleaseSet(t)
+	_, setPayload := testReleaseSet(t)
+	payload := launcherPublishPayload(t, setPayload)
 	var attempts atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		if attempts.Add(1) == 1 {
@@ -77,6 +88,7 @@ func TestPublishLauncherReleaseRetriesOnlyServerFailures(t *testing.T) {
 		}
 		writer.Header().Set("X-Cineko-Release-Generation", "24")
 		writer.WriteHeader(http.StatusOK)
+		_, _ = writer.Write([]byte("{}"))
 	}))
 	defer server.Close()
 
@@ -111,9 +123,26 @@ func TestPublishLauncherReleaseRetriesOnlyServerFailures(t *testing.T) {
 	}
 }
 
+func launcherPublishPayload(t *testing.T, setPayload []byte) []byte {
+	t.Helper()
+	set := &releasepb.LauncherReleaseSet{}
+	if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(setPayload, set); err != nil {
+		t.Fatal(err)
+	}
+	request := servicepb.PublishLauncherRequest_builder{ReleaseSet: set}.Build()
+	payload, err := protojson.Marshal(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return payload
+}
+
 func TestPublishResponseAndGenerationContract(t *testing.T) {
-	if err := validatePublishResponse(nil); err != nil {
-		t.Fatalf("empty generated response = %v", err)
+	if err := validatePublishResponse(nil); err == nil {
+		t.Fatal("empty generated response accepted")
+	}
+	if err := validatePublishResponse([]byte("{}")); err != nil {
+		t.Fatalf("canonical generated response = %v", err)
 	}
 	if err := validatePublishResponse([]byte(`{"generation":"42"}`)); err == nil {
 		t.Fatal("out-of-contract response field accepted")

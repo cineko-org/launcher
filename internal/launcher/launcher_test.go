@@ -26,6 +26,7 @@ import (
 	clientpb "github.com/cineko-org/contracts/v3/gen/go/cineko/client"
 	commonpb "github.com/cineko-org/contracts/v3/gen/go/cineko/common"
 	releasepb "github.com/cineko-org/contracts/v3/gen/go/cineko/release"
+	servicepb "github.com/cineko-org/contracts/v3/gen/go/cineko/service"
 	"github.com/cineko-org/launcher/internal/launcher/artifact"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -60,15 +61,20 @@ func TestLauncherDownloadsVerifiesCachesAndRunsClient(t *testing.T) {
 		case "/health":
 			writeProtoJSON(t, writer, serviceHealthReady())
 		case "/v1/auth/exchange":
-			writeProtoJSON(t, writer, authenticationResponse(time.Now(), "session"))
+			assertTokenExchangeRequest(t, request)
+			writeProtoJSON(t, writer, exchangeTokenResponse(authenticationResponse(time.Now(), "session")))
 		case "/v1/releases/runtime/current":
-			writeProtoJSON(t, writer, release)
+			assertReleaseQuery(t, request)
+			writeProtoJSON(t, writer, runtimeReleaseResponse(release))
 		case "/v1/releases/launcher/current":
-			writeProtoJSON(t, writer, launcherRelease("1.0.0", testArtifact("https://cdn.example/launcher.zip", 1, strings.Repeat("a", 64), "launcher")))
+			assertReleaseQuery(t, request)
+			writeProtoJSON(t, writer, launcherReleaseResponse(launcherRelease("1.0.0", testArtifact("https://cdn.example/launcher.zip", 1, strings.Repeat("a", 64), "launcher"))))
 		case "/v1/launch-tickets":
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(readBody(t, request), ticketRequest); err != nil {
+			input := &servicepb.CreateLaunchTicketRequest{}
+			if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(readBody(t, request), input); err != nil {
 				t.Errorf("decode launch ticket request: %v", err)
 			}
+			ticketRequest = input.GetRequest()
 			if request.Header.Get("Idempotency-Key") == "" {
 				t.Error("launch ticket request is missing idempotency key")
 			}
@@ -82,7 +88,9 @@ func TestLauncherDownloadsVerifiesCachesAndRunsClient(t *testing.T) {
 			ticket := &clientpb.LaunchTicketResponse{}
 			ticket.SetLaunchTicket("launch-secret")
 			ticket.SetExpiresAt(timestamppb.New(time.Now().Add(time.Minute)))
-			writeProtoJSON(t, writer, ticket)
+			response := &servicepb.CreateLaunchTicketResponse{}
+			response.SetResponse(ticket)
+			writeProtoJSON(t, writer, response)
 		case "/client.zip":
 			if request.Header.Get("Authorization") != "" {
 				t.Error("public client artifact request contains Central authorization")
@@ -103,11 +111,13 @@ func TestLauncherDownloadsVerifiesCachesAndRunsClient(t *testing.T) {
 			_, _ = writer.Write(driverArchive)
 		default:
 			if strings.HasPrefix(request.URL.Path, "/v1/devices/") {
-				device := &clientpb.Device{}
-				if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(readBody(t, request), device); err != nil {
+				input := &servicepb.UpsertDeviceRequest{}
+				if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(readBody(t, request), input); err != nil {
 					t.Errorf("decode device request: %v", err)
 				}
-				writeProtoJSON(t, writer, device)
+				response := &servicepb.UpsertDeviceResponse{}
+				response.SetDevice(input.GetDevice())
+				writeProtoJSON(t, writer, response)
 				return
 			}
 			http.NotFound(writer, request)
@@ -177,22 +187,26 @@ func TestLauncherRequiresManualPortableUpdateBeforeRuntimeDownload(t *testing.T)
 		case "/health":
 			writeProtoJSON(t, writer, serviceHealthReady())
 		case "/v1/auth/exchange":
-			writeProtoJSON(t, writer, authenticationResponse(time.Now(), "session"))
+			assertTokenExchangeRequest(t, request)
+			writeProtoJSON(t, writer, exchangeTokenResponse(authenticationResponse(time.Now(), "session")))
 		case "/v1/releases/launcher/current":
-			writeProtoJSON(t, writer, launcherRelease("1.1.0", testArtifact(
+			assertReleaseQuery(t, request)
+			writeProtoJSON(t, writer, launcherReleaseResponse(launcherRelease("1.1.0", testArtifact(
 				"https://releases.example.com/cineko/launcher/v1.1.0/"+runtime.GOOS+"-"+runtime.GOARCH+"/cineko-launcher-v1.1.0.zip",
 				1, strings.Repeat("a", 64), "Cineko Launcher",
-			)))
+			))))
 		case "/v1/releases/runtime/current":
 			runtimeRequests.Add(1)
 			http.Error(writer, "must not load runtime", http.StatusInternalServerError)
 		default:
 			if strings.HasPrefix(request.URL.Path, "/v1/devices/") {
-				device := &clientpb.Device{}
-				if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(readBody(t, request), device); err != nil {
+				input := &servicepb.UpsertDeviceRequest{}
+				if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(readBody(t, request), input); err != nil {
 					t.Errorf("decode device request: %v", err)
 				}
-				writeProtoJSON(t, writer, device)
+				response := &servicepb.UpsertDeviceResponse{}
+				response.SetDevice(input.GetDevice())
+				writeProtoJSON(t, writer, response)
 				return
 			}
 			http.NotFound(writer, request)
@@ -229,13 +243,16 @@ func TestLauncherPublishedDuringRuntimeRetryBlocksBeforeRetry(t *testing.T) {
 		case "/health":
 			writeProtoJSON(t, writer, serviceHealthReady())
 		case "/v1/auth/exchange":
-			writeProtoJSON(t, writer, authenticationResponse(time.Now(), "session"))
+			assertTokenExchangeRequest(t, request)
+			writeProtoJSON(t, writer, exchangeTokenResponse(authenticationResponse(time.Now(), "session")))
 		case "/v1/releases/launcher/current":
 			launcherChecks.Add(1)
-			writeProtoJSON(t, writer, launcherRelease(launcherVersion, testArtifact("https://cdn.example/launcher.zip", 1, strings.Repeat("a", 64), "launcher")))
+			assertReleaseQuery(t, request)
+			writeProtoJSON(t, writer, launcherReleaseResponse(launcherRelease(launcherVersion, testArtifact("https://cdn.example/launcher.zip", 1, strings.Repeat("a", 64), "launcher"))))
 		case "/v1/releases/runtime/current":
 			runtimeRequests.Add(1)
-			writeProtoJSON(t, writer, release)
+			assertReleaseQuery(t, request)
+			writeProtoJSON(t, writer, runtimeReleaseResponse(release))
 		case "/v1/launch-tickets":
 			ticketRequests.Add(1)
 			launcherVersion = "2.0.0"
@@ -249,11 +266,13 @@ func TestLauncherPublishedDuringRuntimeRetryBlocksBeforeRetry(t *testing.T) {
 			_, _ = writer.Write(driverArchive)
 		default:
 			if strings.HasPrefix(request.URL.Path, "/v1/devices/") {
-				device := &clientpb.Device{}
-				if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(readBody(t, request), device); err != nil {
+				input := &servicepb.UpsertDeviceRequest{}
+				if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(readBody(t, request), input); err != nil {
 					t.Errorf("decode device request: %v", err)
 				}
-				writeProtoJSON(t, writer, device)
+				response := &servicepb.UpsertDeviceResponse{}
+				response.SetDevice(input.GetDevice())
+				writeProtoJSON(t, writer, response)
 				return
 			}
 			http.NotFound(writer, request)
@@ -423,6 +442,46 @@ func serviceHealthReady() *commonpb.ServiceHealth {
 	health := &commonpb.ServiceHealth{}
 	health.SetReady(&commonpb.Ready{})
 	return health
+}
+
+func exchangeTokenResponse(authentication *clientpb.AuthenticationResponse) *servicepb.ExchangeTokenResponse {
+	response := &servicepb.ExchangeTokenResponse{}
+	response.SetAuthentication(authentication)
+	return response
+}
+
+func runtimeReleaseResponse(release *releasepb.RuntimeRelease) *servicepb.GetRuntimeReleaseResponse {
+	response := &servicepb.GetRuntimeReleaseResponse{}
+	response.SetRelease(release)
+	return response
+}
+
+func launcherReleaseResponse(release *releasepb.LauncherRelease) *servicepb.GetLauncherReleaseResponse {
+	response := &servicepb.GetLauncherReleaseResponse{}
+	response.SetRelease(release)
+	return response
+}
+
+func assertTokenExchangeRequest(t *testing.T, request *http.Request) {
+	t.Helper()
+	input := &servicepb.ExchangeTokenRequest{}
+	if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(readBody(t, request), input); err != nil {
+		t.Fatalf("decode token exchange request: %v", err)
+	}
+	if input.GetRequest().GetUserId() != "user" || input.GetRequest().GetAccessToken() != "credential" {
+		t.Fatalf("token exchange request = %+v", input.GetRequest())
+	}
+}
+
+func assertReleaseQuery(t *testing.T, request *http.Request) {
+	t.Helper()
+	if request.URL.Query().Get("channel") != "stable" || request.URL.Query().Get("platform") != runtime.GOOS ||
+		request.URL.Query().Get("architecture") != runtime.GOARCH || request.URL.Query().Has("arch") {
+		t.Fatalf("release query = %q", request.URL.RawQuery)
+	}
+	if len(readBody(t, request)) != 0 {
+		t.Fatal("GET release request included a body")
+	}
 }
 
 func launcherRelease(version string, artifact *releasepb.Artifact) *releasepb.LauncherRelease {

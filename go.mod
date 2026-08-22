@@ -6,7 +6,7 @@ toolchain go1.26.6
 
 require (
 	buf.build/go/protovalidate v1.3.0
-	github.com/cineko-org/contracts/v3 v3.5.3
+	github.com/cineko-org/contracts/v3 v3.6.1
 	github.com/wailsapp/wails/v2 v2.15.0
 	golang.org/x/mod v0.40.0
 	golang.org/x/sys v0.47.0

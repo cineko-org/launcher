@@ -112,7 +112,11 @@ func publishFromArgs(args []string) error {
 	if err != nil {
 		return err
 	}
-	payload, err := protojson.Marshal(set)
+	input := servicepb.PublishLauncherRequest_builder{ReleaseSet: set}.Build()
+	if err := protovalidate.Validate(input); err != nil {
+		return fmt.Errorf("validate generated Launcher publish request: %w", err)
+	}
+	payload, err := protojson.Marshal(input)
 	if err != nil {
 		return fmt.Errorf("encode generated Launcher release set: %w", err)
 	}
@@ -146,13 +150,16 @@ func publishLauncherRelease(
 			sleep(publishBackoff(attempt))
 			continue
 		}
-		body, readErr := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes))
+		body, readErr := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes+1))
 		closeErr := response.Body.Close()
 		if readErr != nil {
 			return fmt.Errorf("read Central release response: %w", readErr)
 		}
 		if closeErr != nil {
 			return fmt.Errorf("close Central release response: %w", closeErr)
+		}
+		if len(body) > maxResponseBytes {
+			return errors.New("central Launcher release response exceeds size limit")
 		}
 
 		if response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices {
@@ -178,7 +185,7 @@ func publishLauncherRelease(
 
 func validatePublishResponse(payload []byte) error {
 	if len(bytes.TrimSpace(payload)) == 0 {
-		payload = []byte("{}")
+		return errors.New("central returned an empty Launcher publish response")
 	}
 	response := servicepb.PublishLauncherResponse_builder{}.Build()
 	if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(payload, response); err != nil {
