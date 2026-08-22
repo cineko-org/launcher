@@ -37,13 +37,13 @@ test:
 	$(GO) test -mod=vendor -race ./...
 
 contract-check:
-	grep -Eq '^# github.com/cineko-org/contracts v0.0.0-20260821175959-3ce1fdcc5641$$' vendor/modules.txt
+	grep -Eq '^# github.com/cineko-org/contracts/v3 v3.5.3$$' vendor/modules.txt
 
 contract-release-check:
 	@! grep -Eq '^[[:space:]]*replace([[:space:]]|\()' go.mod
-	@grep -Eq '^[[:space:]]*github.com/cineko-org/contracts v0.0.0-20260821175959-3ce1fdcc5641$$' go.mod
-	@grep -Eq '^# github.com/cineko-org/contracts v0.0.0-20260821175959-3ce1fdcc5641$$' vendor/modules.txt
-	@grep -Eq '^github.com/cineko-org/contracts v0.0.0-20260821175959-3ce1fdcc5641 h1:' go.sum
+	@grep -Eq '^[[:space:]]*github.com/cineko-org/contracts/v3 v3.5.3$$' go.mod
+	@grep -Eq '^# github.com/cineko-org/contracts/v3 v3.5.3$$' vendor/modules.txt
+	@grep -Eq '^github.com/cineko-org/contracts/v3 v3.5.3 h1:' go.sum
 
 workflow-check:
 	$(GO) run github.com/rhysd/actionlint/cmd/actionlint@$(ACTIONLINT_VERSION) .github/workflows/*.yml

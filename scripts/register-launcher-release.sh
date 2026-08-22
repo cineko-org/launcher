@@ -23,25 +23,24 @@ if [[ "$public_base" != https://* ]]; then
   exit 2
 fi
 
-for command in curl jq sha256sum wc; do
-  command -v "$command" >/dev/null || {
-    printf '%s is required on the release publisher runner\n' "$command" >&2
-    exit 2
-  }
-done
+command -v go >/dev/null || {
+  printf 'go is required on the release publisher runner\n' >&2
+  exit 2
+}
 
 temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/cineko-launcher-register.XXXXXX")"
 readonly temporary_root
 trap 'rm -rf "$temporary_root"' EXIT
-readonly releases_file="$temporary_root/releases.jsonl"
-: >"$releases_file"
+readonly release_contract="$temporary_root/releasecontract"
+GOWORK=off go build -mod=vendor -o "$release_contract" ./cmd/releasecontract
+release_paths=()
 
 append_release() {
-	local platform="$1"
-	local architecture="$2"
-	local extension="$3"
-	local executable="$4"
-	local platform_key="${platform}-${architecture}"
+  local platform="$1"
+  local architecture="$2"
+  local extension="$3"
+  local executable="$4"
+  local platform_key="${platform}-${architecture}"
   local filename="cineko-launcher-v${version}-${platform_key}.${extension}"
   local artifact_path="${assets_dir}/${filename}"
 
@@ -50,35 +49,18 @@ append_release() {
     return 1
   fi
 
-  local size
-  local sha256
-  size="$(wc -c <"$artifact_path" | tr -d '[:space:]')"
-  sha256="$(sha256sum "$artifact_path" | awk '{print $1}')"
-	jq -cn \
-	    --arg channel stable \
-	    --arg platform "$platform" \
-	    --arg architecture "$architecture" \
-    --arg version "$version" \
-    --arg url "${public_base}/${filename}" \
-    --arg sha256 "$sha256" \
-    --arg executable "$executable" \
-    --arg publishedAt "$published_at" \
-    --argjson size "$size" \
-	    '{channel:$channel,platform:$platform,architecture:$architecture,version:$version,launcher:{url:$url,size:$size,sha256:$sha256,executable:$executable},publishedAt:$publishedAt}' \
-    >>"$releases_file"
+  local release_path="$temporary_root/${platform_key}.json"
+  "$release_contract" release "$version" "$platform/$architecture" "$artifact_path" "$executable" \
+    "${public_base}/${filename}" "$published_at" >"$release_path"
+  release_paths+=("$release_path")
 }
 
 append_release darwin arm64 zip 'Cineko Launcher.app/Contents/MacOS/Cineko Launcher'
 append_release windows amd64 exe 'Cineko Launcher.exe'
 append_release linux amd64 AppImage "cineko-launcher-v${version}-linux-amd64.AppImage"
 
-payload="$(jq -sc '{releases:.}' "$releases_file")"
-curl --fail-with-body --retry 3 --retry-all-errors \
-  --request POST \
-  --header "Authorization: Bearer ${CINEKO_RELEASE_PUBLISH_TOKEN}" \
-  --header 'Content-Type: application/json' \
-  --data "$payload" \
-  "${CINEKO_CENTRAL_URL%/}/v1/release-registry/launcher" |
-  jq -e '.generation | numbers | select(. > 0)' >/dev/null
+readonly payload="$temporary_root/launcher-release-set.json"
+"$release_contract" set "${release_paths[@]}" >"$payload"
+"$release_contract" publish "$CINEKO_CENTRAL_URL" "$payload"
 
 printf 'registered Launcher v%s for all supported platforms\n' "$version"

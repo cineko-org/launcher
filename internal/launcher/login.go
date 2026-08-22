@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	clientpb "github.com/cineko-org/contracts/gen/go/cineko/client"
+	clientpb "github.com/cineko-org/contracts/v3/gen/go/cineko/client"
 	centralstore "github.com/cineko-org/launcher/internal/centralclient"
 	"github.com/cineko-org/launcher/internal/launcher/managedfiles"
 

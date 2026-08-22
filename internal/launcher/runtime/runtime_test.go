@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	releasepb "github.com/cineko-org/contracts/gen/go/cineko/release"
+	releasepb "github.com/cineko-org/contracts/v3/gen/go/cineko/release"
 )
 
 func TestLoadComponentDetectsMutation(t *testing.T) {
