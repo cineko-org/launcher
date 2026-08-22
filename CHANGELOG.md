@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.1](https://github.com/cineko-org/launcher/compare/v1.3.0...v1.3.1) (2026-08-22)
+
+
+### Bug Fixes
+
+* release refactor commits ([#25](https://github.com/cineko-org/launcher/issues/25)) ([00db1f1](https://github.com/cineko-org/launcher/commit/00db1f11cf9bc315731e0deef40f09e2084aed5e))
+
+
+### Code Refactoring
+
+* use generated protobuf contracts ([#24](https://github.com/cineko-org/launcher/issues/24)) ([32e1252](https://github.com/cineko-org/launcher/commit/32e12529d360f6c719f957f9c32577163bc483f6))
+
 ## [1.3.0](https://github.com/cineko-org/launcher/compare/v1.2.7...v1.3.0) (2026-08-20)
 
 
