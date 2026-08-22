@@ -481,18 +481,14 @@ func defaultWriter(value io.Writer, fallback io.Writer) io.Writer {
 }
 
 func loadOrCreateIdentity(dataDir string) (identity, error) {
-	path := filepath.Join(dataDir, "installation.json")
-	contents, err := os.ReadFile(path) // #nosec G304 -- path is scoped to launcher data directory.
+	value, err := loadIdentity(dataDir)
 	if err == nil {
-		var value identity
-		if json.Unmarshal(contents, &value) != nil || value.InstallationID == "" || value.DeviceID == "" {
-			return identity{}, errors.New("launcher installation identity is invalid")
-		}
 		return value, nil
 	}
 	if !errors.Is(err, os.ErrNotExist) {
-		return identity{}, fmt.Errorf("read launcher installation identity: %w", err)
+		return identity{}, err
 	}
+	path := filepath.Join(dataDir, "installation.json")
 	installation, err := randomToken(16)
 	if err != nil {
 		return identity{}, err
@@ -501,9 +497,22 @@ func loadOrCreateIdentity(dataDir string) (identity, error) {
 	if err != nil {
 		return identity{}, err
 	}
-	value := identity{InstallationID: "install_" + installation, DeviceID: "device_" + device}
+	value = identity{InstallationID: "install_" + installation, DeviceID: "device_" + device}
 	if err := managedfiles.WriteJSONAtomic(path, value); err != nil {
 		return identity{}, err
+	}
+	return value, nil
+}
+
+func loadIdentity(dataDir string) (identity, error) {
+	path := filepath.Join(dataDir, "installation.json")
+	contents, err := os.ReadFile(path) // #nosec G304 -- path is scoped to launcher data directory.
+	if err != nil {
+		return identity{}, fmt.Errorf("read launcher installation identity: %w", err)
+	}
+	var value identity
+	if json.Unmarshal(contents, &value) != nil || value.InstallationID == "" || value.DeviceID == "" {
+		return identity{}, errors.New("launcher installation identity is invalid")
 	}
 	return value, nil
 }

@@ -4,7 +4,7 @@ This inventory records externally observable behavior. Deployment topology, host
 
 ## Compatibility and authentication
 
-- Central messages use the generated `cineko.client` and `cineko.release` ProtoJSON contracts directly. Every response must carry a non-negative release generation header.
+- Central HTTP uses only the latest generated `cineko.service` request and response wrappers. Inner `cineko.client` and `cineko.release` messages are never sent as top-level wire bodies, and required inner responses are rejected by generated validation plus an explicit caller-side semantic check. Every release response must carry a positive release generation header.
 - Startup checks `GET /health` before asking for a PIN. Only `ready` continues.
 - A six-digit PIN is exchanged with `POST /v1/auth/pin`. A supplied access credential uses `POST /v1/auth/exchange`.
 - Authenticated calls use bearer access tokens. An expired or rejected access token is refreshed once with `POST /v1/auth/refresh`, then the original call is retried once.
@@ -26,7 +26,9 @@ This inventory records externally observable behavior. Deployment topology, host
 | Launcher release | `GET /v1/releases/launcher/current` | Stable channel and current platform/architecture | Continue or require manual portable update | Invalid metadata is terminal |
 | Runtime release | `GET /v1/releases/runtime/current` | Stable compatible Client, browser, and Playwright set | Verify/install exact set | Release changes restart preparation, at most three times |
 | Launch ticket | `POST /v1/launch-tickets` | Exact generation and component identities | Single-use launch envelope | Nonce is the idempotency key; stale release restarts preparation |
-| Publish portable Launcher set | `POST /v1/release-registry/launcher` | Repository release token and all three generated `LauncherRelease` platform messages | Empty generated Proto response and positive release-generation header | Network and server failures retry at most four times; client errors are terminal |
+| Publish portable Launcher set | `POST /v1/release-registry/launcher` | Repository release token and all three generated `LauncherRelease` platform messages | Non-empty canonical generated response (`{}`) and positive release-generation header | Network and server failures retry at most four times; client errors are terminal |
+
+`GET` service points carry no request body. The matching generated request message is validated first, then Bootstrap identifies the installation with `installationId`; current-release lookups use `channel`, `platform`, and `architecture` query parameters. Unknown ProtoJSON fields, empty success bodies, legacy inner-message bodies, and HTTP 204 compatibility responses fail closed.
 
 ## Local mutations and rollback
 

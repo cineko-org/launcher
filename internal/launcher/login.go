@@ -29,7 +29,7 @@ func authenticateLauncher(ctx context.Context, config Config, identity identity)
 			AccessToken: config.AccessToken, HTTPClient: config.HTTPClient, SessionChanged: onSessionChanged,
 		})
 	}
-	if store, err := resumeLauncherSession(ctx, config); err == nil {
+	if store, err := resumeLauncherSession(ctx, config, identity.InstallationID); err == nil {
 		return store, nil
 	}
 	pin := strings.TrimSpace(config.PIN)
@@ -66,7 +66,7 @@ func validPIN(pin string) bool {
 	return true
 }
 
-func resumeLauncherSession(ctx context.Context, config Config) (*centralstore.Store, error) {
+func resumeLauncherSession(ctx context.Context, config Config, installationID string) (*centralstore.Store, error) {
 	contents, err := os.ReadFile(launcherSessionPath(config.DataDir)) // #nosec G304 -- scoped launcher state path.
 	if err != nil {
 		return nil, err
@@ -91,7 +91,7 @@ func resumeLauncherSession(ctx context.Context, config Config) (*centralstore.St
 	if err != nil {
 		return nil, err
 	}
-	if err := store.ValidateSession(ctx); err != nil {
+	if err := store.ValidateSession(ctx, installationID); err != nil {
 		_ = store.Close()
 		_ = os.Remove(launcherSessionPath(config.DataDir))
 		return nil, err
@@ -118,9 +118,11 @@ func saveLauncherSession(dataDir string, value *clientpb.AuthenticationResponse)
 func launcherSessionPath(dataDir string) string { return filepath.Join(dataDir, "session.json") }
 
 func Logout(ctx context.Context, config Config) error {
-	if store, err := resumeLauncherSession(ctx, config); err == nil {
-		_ = store.Logout(ctx)
-		_ = store.Close()
+	if identity, err := loadIdentity(config.DataDir); err == nil {
+		if store, resumeErr := resumeLauncherSession(ctx, config, identity.InstallationID); resumeErr == nil {
+			_ = store.Logout(ctx)
+			_ = store.Close()
+		}
 	}
 	err := os.Remove(launcherSessionPath(config.DataDir))
 	if errors.Is(err, os.ErrNotExist) {
