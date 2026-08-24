@@ -10,7 +10,7 @@ import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	catalog "github.com/cineko-org/contracts/v3/gen/go/cineko/catalog"
 	common "github.com/cineko-org/contracts/v3/gen/go/cineko/common"
-	observation "github.com/cineko-org/contracts/v3/gen/go/cineko/observation"
+	_ "github.com/cineko-org/contracts/v3/gen/go/cineko/observation"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/known/durationpb"
@@ -1607,10 +1607,9 @@ type Preset struct {
 	xxx_hidden_Name           *string                `protobuf:"bytes,3,opt,name=name"`
 	xxx_hidden_TheaterId      *string                `protobuf:"bytes,4,opt,name=theater_id,json=theaterId"`
 	xxx_hidden_AuditoriumId   *string                `protobuf:"bytes,5,opt,name=auditorium_id,json=auditoriumId"`
-	xxx_hidden_SeatCount      int32                  `protobuf:"varint,6,opt,name=seat_count,json=seatCount"`
-	xxx_hidden_SeatPreference *SeatPreference        `protobuf:"bytes,7,opt,name=seat_preference,json=seatPreference"`
-	xxx_hidden_CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt"`
-	xxx_hidden_UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt"`
+	xxx_hidden_SeatPreference *SeatPreference        `protobuf:"bytes,6,opt,name=seat_preference,json=seatPreference"`
+	xxx_hidden_CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt"`
+	xxx_hidden_UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt"`
 	XXX_raceDetectHookData    protoimpl.RaceDetectHookData
 	XXX_presence              [1]uint32
 	unknownFields             protoimpl.UnknownFields
@@ -1692,13 +1691,6 @@ func (x *Preset) GetAuditoriumId() string {
 	return ""
 }
 
-func (x *Preset) GetSeatCount() int32 {
-	if x != nil {
-		return x.xxx_hidden_SeatCount
-	}
-	return 0
-}
-
 func (x *Preset) GetSeatPreference() *SeatPreference {
 	if x != nil {
 		return x.xxx_hidden_SeatPreference
@@ -1722,32 +1714,27 @@ func (x *Preset) GetUpdatedAt() *timestamppb.Timestamp {
 
 func (x *Preset) SetId(v string) {
 	x.xxx_hidden_Id = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 9)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 8)
 }
 
 func (x *Preset) SetUserId(v string) {
 	x.xxx_hidden_UserId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 9)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 8)
 }
 
 func (x *Preset) SetName(v string) {
 	x.xxx_hidden_Name = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 9)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 8)
 }
 
 func (x *Preset) SetTheaterId(v string) {
 	x.xxx_hidden_TheaterId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 9)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 8)
 }
 
 func (x *Preset) SetAuditoriumId(v string) {
 	x.xxx_hidden_AuditoriumId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 9)
-}
-
-func (x *Preset) SetSeatCount(v int32) {
-	x.xxx_hidden_SeatCount = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 9)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 8)
 }
 
 func (x *Preset) SetSeatPreference(v *SeatPreference) {
@@ -1797,13 +1784,6 @@ func (x *Preset) HasAuditoriumId() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 4)
 }
 
-func (x *Preset) HasSeatCount() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 5)
-}
-
 func (x *Preset) HasSeatPreference() bool {
 	if x == nil {
 		return false
@@ -1850,11 +1830,6 @@ func (x *Preset) ClearAuditoriumId() {
 	x.xxx_hidden_AuditoriumId = nil
 }
 
-func (x *Preset) ClearSeatCount() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 5)
-	x.xxx_hidden_SeatCount = 0
-}
-
 func (x *Preset) ClearSeatPreference() {
 	x.xxx_hidden_SeatPreference = nil
 }
@@ -1875,7 +1850,6 @@ type Preset_builder struct {
 	Name           *string
 	TheaterId      *string
 	AuditoriumId   *string
-	SeatCount      *int32
 	SeatPreference *SeatPreference
 	CreatedAt      *timestamppb.Timestamp
 	UpdatedAt      *timestamppb.Timestamp
@@ -1886,28 +1860,24 @@ func (b0 Preset_builder) Build() *Preset {
 	b, x := &b0, m0
 	_, _ = b, x
 	if b.Id != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 9)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 8)
 		x.xxx_hidden_Id = b.Id
 	}
 	if b.UserId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 9)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 8)
 		x.xxx_hidden_UserId = b.UserId
 	}
 	if b.Name != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 9)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 8)
 		x.xxx_hidden_Name = b.Name
 	}
 	if b.TheaterId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 9)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 8)
 		x.xxx_hidden_TheaterId = b.TheaterId
 	}
 	if b.AuditoriumId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 9)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 8)
 		x.xxx_hidden_AuditoriumId = b.AuditoriumId
-	}
-	if b.SeatCount != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 9)
-		x.xxx_hidden_SeatCount = *b.SeatCount
 	}
 	x.xxx_hidden_SeatPreference = b.SeatPreference
 	x.xxx_hidden_CreatedAt = b.CreatedAt
@@ -2209,9 +2179,12 @@ func (b0 MonitorFailed_builder) Build() *MonitorFailed {
 }
 
 type MonitorStopped struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Reason      *string                `protobuf:"bytes,1,opt,name=reason"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *MonitorStopped) Reset() {
@@ -2239,15 +2212,47 @@ func (x *MonitorStopped) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
+func (x *MonitorStopped) GetReason() string {
+	if x != nil {
+		if x.xxx_hidden_Reason != nil {
+			return *x.xxx_hidden_Reason
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *MonitorStopped) SetReason(v string) {
+	x.xxx_hidden_Reason = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 1)
+}
+
+func (x *MonitorStopped) HasReason() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *MonitorStopped) ClearReason() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_Reason = nil
+}
+
 type MonitorStopped_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	Reason *string
 }
 
 func (b0 MonitorStopped_builder) Build() *MonitorStopped {
 	m0 := &MonitorStopped{}
 	b, x := &b0, m0
 	_, _ = b, x
+	if b.Reason != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 1)
+		x.xxx_hidden_Reason = b.Reason
+	}
 	return m0
 }
 
@@ -2643,26 +2648,27 @@ func (*monitorState_Stopped) isMonitorState_State() {}
 func (*monitorState_PaymentUnknown) isMonitorState_State() {}
 
 type Monitor struct {
-	state                        protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id                *string                `protobuf:"bytes,1,opt,name=id"`
-	xxx_hidden_UserId            *string                `protobuf:"bytes,2,opt,name=user_id,json=userId"`
-	xxx_hidden_PresetId          *string                `protobuf:"bytes,3,opt,name=preset_id,json=presetId"`
-	xxx_hidden_MovieId           *string                `protobuf:"bytes,4,opt,name=movie_id,json=movieId"`
-	xxx_hidden_MovieTitle        *string                `protobuf:"bytes,5,opt,name=movie_title,json=movieTitle"`
-	xxx_hidden_TargetDates       *[]*common.LocalDate   `protobuf:"bytes,6,rep,name=target_dates,json=targetDates"`
-	xxx_hidden_TargetWeekdays    []int32                `protobuf:"varint,7,rep,packed,name=target_weekdays,json=targetWeekdays"`
-	xxx_hidden_SearchHorizonDays int32                  `protobuf:"varint,8,opt,name=search_horizon_days,json=searchHorizonDays"`
-	xxx_hidden_EarliestTime      *common.LocalTime      `protobuf:"bytes,9,opt,name=earliest_time,json=earliestTime"`
-	xxx_hidden_LatestTime        *common.LocalTime      `protobuf:"bytes,10,opt,name=latest_time,json=latestTime"`
-	xxx_hidden_State             *MonitorState          `protobuf:"bytes,11,opt,name=state"`
-	xxx_hidden_LastCheckedAt     *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=last_checked_at,json=lastCheckedAt"`
-	xxx_hidden_ReservationId     *string                `protobuf:"bytes,13,opt,name=reservation_id,json=reservationId"`
-	xxx_hidden_CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=created_at,json=createdAt"`
-	xxx_hidden_UpdatedAt         *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=updated_at,json=updatedAt"`
-	XXX_raceDetectHookData       protoimpl.RaceDetectHookData
-	XXX_presence                 [1]uint32
-	unknownFields                protoimpl.UnknownFields
-	sizeCache                    protoimpl.SizeCache
+	state                             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Id                     *string                `protobuf:"bytes,1,opt,name=id"`
+	xxx_hidden_UserId                 *string                `protobuf:"bytes,2,opt,name=user_id,json=userId"`
+	xxx_hidden_PresetId               *string                `protobuf:"bytes,3,opt,name=preset_id,json=presetId"`
+	xxx_hidden_MovieId                *string                `protobuf:"bytes,4,opt,name=movie_id,json=movieId"`
+	xxx_hidden_MovieTitle             *string                `protobuf:"bytes,5,opt,name=movie_title,json=movieTitle"`
+	xxx_hidden_TargetWeekdays         []int32                `protobuf:"varint,6,rep,packed,name=target_weekdays,json=targetWeekdays"`
+	xxx_hidden_EarliestTime           *common.LocalTime      `protobuf:"bytes,7,opt,name=earliest_time,json=earliestTime"`
+	xxx_hidden_LatestTime             *common.LocalTime      `protobuf:"bytes,8,opt,name=latest_time,json=latestTime"`
+	xxx_hidden_State                  *MonitorState          `protobuf:"bytes,9,opt,name=state"`
+	xxx_hidden_LastCheckedAt          *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=last_checked_at,json=lastCheckedAt"`
+	xxx_hidden_ReservationId          *string                `protobuf:"bytes,11,opt,name=reservation_id,json=reservationId"`
+	xxx_hidden_CreatedAt              *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=created_at,json=createdAt"`
+	xxx_hidden_UpdatedAt              *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt"`
+	xxx_hidden_SeatCount              int32                  `protobuf:"varint,14,opt,name=seat_count,json=seatCount"`
+	xxx_hidden_SeatType               *string                `protobuf:"bytes,15,opt,name=seat_type,json=seatType"`
+	xxx_hidden_WatchCancellationSeats bool                   `protobuf:"varint,16,opt,name=watch_cancellation_seats,json=watchCancellationSeats"`
+	XXX_raceDetectHookData            protoimpl.RaceDetectHookData
+	XXX_presence                      [1]uint32
+	unknownFields                     protoimpl.UnknownFields
+	sizeCache                         protoimpl.SizeCache
 }
 
 func (x *Monitor) Reset() {
@@ -2740,27 +2746,11 @@ func (x *Monitor) GetMovieTitle() string {
 	return ""
 }
 
-func (x *Monitor) GetTargetDates() []*common.LocalDate {
-	if x != nil {
-		if x.xxx_hidden_TargetDates != nil {
-			return *x.xxx_hidden_TargetDates
-		}
-	}
-	return nil
-}
-
 func (x *Monitor) GetTargetWeekdays() []int32 {
 	if x != nil {
 		return x.xxx_hidden_TargetWeekdays
 	}
 	return nil
-}
-
-func (x *Monitor) GetSearchHorizonDays() int32 {
-	if x != nil {
-		return x.xxx_hidden_SearchHorizonDays
-	}
-	return 0
 }
 
 func (x *Monitor) GetEarliestTime() *common.LocalTime {
@@ -2815,42 +2805,57 @@ func (x *Monitor) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *Monitor) GetSeatCount() int32 {
+	if x != nil {
+		return x.xxx_hidden_SeatCount
+	}
+	return 0
+}
+
+func (x *Monitor) GetSeatType() string {
+	if x != nil {
+		if x.xxx_hidden_SeatType != nil {
+			return *x.xxx_hidden_SeatType
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *Monitor) GetWatchCancellationSeats() bool {
+	if x != nil {
+		return x.xxx_hidden_WatchCancellationSeats
+	}
+	return false
+}
+
 func (x *Monitor) SetId(v string) {
 	x.xxx_hidden_Id = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 15)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 16)
 }
 
 func (x *Monitor) SetUserId(v string) {
 	x.xxx_hidden_UserId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 15)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 16)
 }
 
 func (x *Monitor) SetPresetId(v string) {
 	x.xxx_hidden_PresetId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 15)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 16)
 }
 
 func (x *Monitor) SetMovieId(v string) {
 	x.xxx_hidden_MovieId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 15)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 16)
 }
 
 func (x *Monitor) SetMovieTitle(v string) {
 	x.xxx_hidden_MovieTitle = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 15)
-}
-
-func (x *Monitor) SetTargetDates(v []*common.LocalDate) {
-	x.xxx_hidden_TargetDates = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 16)
 }
 
 func (x *Monitor) SetTargetWeekdays(v []int32) {
 	x.xxx_hidden_TargetWeekdays = v
-}
-
-func (x *Monitor) SetSearchHorizonDays(v int32) {
-	x.xxx_hidden_SearchHorizonDays = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 7, 15)
 }
 
 func (x *Monitor) SetEarliestTime(v *common.LocalTime) {
@@ -2871,7 +2876,7 @@ func (x *Monitor) SetLastCheckedAt(v *timestamppb.Timestamp) {
 
 func (x *Monitor) SetReservationId(v string) {
 	x.xxx_hidden_ReservationId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 12, 15)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 10, 16)
 }
 
 func (x *Monitor) SetCreatedAt(v *timestamppb.Timestamp) {
@@ -2880,6 +2885,21 @@ func (x *Monitor) SetCreatedAt(v *timestamppb.Timestamp) {
 
 func (x *Monitor) SetUpdatedAt(v *timestamppb.Timestamp) {
 	x.xxx_hidden_UpdatedAt = v
+}
+
+func (x *Monitor) SetSeatCount(v int32) {
+	x.xxx_hidden_SeatCount = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 13, 16)
+}
+
+func (x *Monitor) SetSeatType(v string) {
+	x.xxx_hidden_SeatType = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 14, 16)
+}
+
+func (x *Monitor) SetWatchCancellationSeats(v bool) {
+	x.xxx_hidden_WatchCancellationSeats = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 15, 16)
 }
 
 func (x *Monitor) HasId() bool {
@@ -2917,13 +2937,6 @@ func (x *Monitor) HasMovieTitle() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 4)
 }
 
-func (x *Monitor) HasSearchHorizonDays() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 7)
-}
-
 func (x *Monitor) HasEarliestTime() bool {
 	if x == nil {
 		return false
@@ -2956,7 +2969,7 @@ func (x *Monitor) HasReservationId() bool {
 	if x == nil {
 		return false
 	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 12)
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 10)
 }
 
 func (x *Monitor) HasCreatedAt() bool {
@@ -2971,6 +2984,27 @@ func (x *Monitor) HasUpdatedAt() bool {
 		return false
 	}
 	return x.xxx_hidden_UpdatedAt != nil
+}
+
+func (x *Monitor) HasSeatCount() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 13)
+}
+
+func (x *Monitor) HasSeatType() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 14)
+}
+
+func (x *Monitor) HasWatchCancellationSeats() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 15)
 }
 
 func (x *Monitor) ClearId() {
@@ -2998,11 +3032,6 @@ func (x *Monitor) ClearMovieTitle() {
 	x.xxx_hidden_MovieTitle = nil
 }
 
-func (x *Monitor) ClearSearchHorizonDays() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 7)
-	x.xxx_hidden_SearchHorizonDays = 0
-}
-
 func (x *Monitor) ClearEarliestTime() {
 	x.xxx_hidden_EarliestTime = nil
 }
@@ -3020,7 +3049,7 @@ func (x *Monitor) ClearLastCheckedAt() {
 }
 
 func (x *Monitor) ClearReservationId() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 12)
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 10)
 	x.xxx_hidden_ReservationId = nil
 }
 
@@ -3032,24 +3061,40 @@ func (x *Monitor) ClearUpdatedAt() {
 	x.xxx_hidden_UpdatedAt = nil
 }
 
+func (x *Monitor) ClearSeatCount() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 13)
+	x.xxx_hidden_SeatCount = 0
+}
+
+func (x *Monitor) ClearSeatType() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 14)
+	x.xxx_hidden_SeatType = nil
+}
+
+func (x *Monitor) ClearWatchCancellationSeats() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 15)
+	x.xxx_hidden_WatchCancellationSeats = false
+}
+
 type Monitor_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Id                *string
-	UserId            *string
-	PresetId          *string
-	MovieId           *string
-	MovieTitle        *string
-	TargetDates       []*common.LocalDate
-	TargetWeekdays    []int32
-	SearchHorizonDays *int32
-	EarliestTime      *common.LocalTime
-	LatestTime        *common.LocalTime
-	State             *MonitorState
-	LastCheckedAt     *timestamppb.Timestamp
-	ReservationId     *string
-	CreatedAt         *timestamppb.Timestamp
-	UpdatedAt         *timestamppb.Timestamp
+	Id                     *string
+	UserId                 *string
+	PresetId               *string
+	MovieId                *string
+	MovieTitle             *string
+	TargetWeekdays         []int32
+	EarliestTime           *common.LocalTime
+	LatestTime             *common.LocalTime
+	State                  *MonitorState
+	LastCheckedAt          *timestamppb.Timestamp
+	ReservationId          *string
+	CreatedAt              *timestamppb.Timestamp
+	UpdatedAt              *timestamppb.Timestamp
+	SeatCount              *int32
+	SeatType               *string
+	WatchCancellationSeats *bool
 }
 
 func (b0 Monitor_builder) Build() *Monitor {
@@ -3057,41 +3102,48 @@ func (b0 Monitor_builder) Build() *Monitor {
 	b, x := &b0, m0
 	_, _ = b, x
 	if b.Id != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 15)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 16)
 		x.xxx_hidden_Id = b.Id
 	}
 	if b.UserId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 15)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 16)
 		x.xxx_hidden_UserId = b.UserId
 	}
 	if b.PresetId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 15)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 16)
 		x.xxx_hidden_PresetId = b.PresetId
 	}
 	if b.MovieId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 15)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 16)
 		x.xxx_hidden_MovieId = b.MovieId
 	}
 	if b.MovieTitle != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 15)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 16)
 		x.xxx_hidden_MovieTitle = b.MovieTitle
 	}
-	x.xxx_hidden_TargetDates = &b.TargetDates
 	x.xxx_hidden_TargetWeekdays = b.TargetWeekdays
-	if b.SearchHorizonDays != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 7, 15)
-		x.xxx_hidden_SearchHorizonDays = *b.SearchHorizonDays
-	}
 	x.xxx_hidden_EarliestTime = b.EarliestTime
 	x.xxx_hidden_LatestTime = b.LatestTime
 	x.xxx_hidden_State = b.State
 	x.xxx_hidden_LastCheckedAt = b.LastCheckedAt
 	if b.ReservationId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 12, 15)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 10, 16)
 		x.xxx_hidden_ReservationId = b.ReservationId
 	}
 	x.xxx_hidden_CreatedAt = b.CreatedAt
 	x.xxx_hidden_UpdatedAt = b.UpdatedAt
+	if b.SeatCount != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 13, 16)
+		x.xxx_hidden_SeatCount = *b.SeatCount
+	}
+	if b.SeatType != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 14, 16)
+		x.xxx_hidden_SeatType = b.SeatType
+	}
+	if b.WatchCancellationSeats != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 15, 16)
+		x.xxx_hidden_WatchCancellationSeats = *b.WatchCancellationSeats
+	}
 	return m0
 }
 
@@ -8128,20 +8180,14 @@ func (*streamControl_RetentionGap) isStreamControl_Control() {}
 func (*streamControl_InvalidCursor) isStreamControl_Control() {}
 
 type LaunchContext struct {
-	state                               protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_InstallationId           *string                `protobuf:"bytes,1,opt,name=installation_id,json=installationId"`
-	xxx_hidden_DeviceId                 *string                `protobuf:"bytes,2,opt,name=device_id,json=deviceId"`
-	xxx_hidden_ReleaseGeneration        int64                  `protobuf:"varint,3,opt,name=release_generation,json=releaseGeneration"`
-	xxx_hidden_ClientVersion            *string                `protobuf:"bytes,4,opt,name=client_version,json=clientVersion"`
-	xxx_hidden_ArtifactSha256           *string                `protobuf:"bytes,5,opt,name=artifact_sha256,json=artifactSha256"`
-	xxx_hidden_BrowserRevision          *string                `protobuf:"bytes,6,opt,name=browser_revision,json=browserRevision"`
-	xxx_hidden_BrowserArtifactSha256    *string                `protobuf:"bytes,7,opt,name=browser_artifact_sha256,json=browserArtifactSha256"`
-	xxx_hidden_PlaywrightVersion        *string                `protobuf:"bytes,8,opt,name=playwright_version,json=playwrightVersion"`
-	xxx_hidden_PlaywrightArtifactSha256 *string                `protobuf:"bytes,9,opt,name=playwright_artifact_sha256,json=playwrightArtifactSha256"`
-	XXX_raceDetectHookData              protoimpl.RaceDetectHookData
-	XXX_presence                        [1]uint32
-	unknownFields                       protoimpl.UnknownFields
-	sizeCache                           protoimpl.SizeCache
+	state                     protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_InstallationId *string                `protobuf:"bytes,1,opt,name=installation_id,json=installationId"`
+	xxx_hidden_DeviceId       *string                `protobuf:"bytes,2,opt,name=device_id,json=deviceId"`
+	xxx_hidden_ClientVersion  *string                `protobuf:"bytes,3,opt,name=client_version,json=clientVersion"`
+	XXX_raceDetectHookData    protoimpl.RaceDetectHookData
+	XXX_presence              [1]uint32
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *LaunchContext) Reset() {
@@ -8189,13 +8235,6 @@ func (x *LaunchContext) GetDeviceId() string {
 	return ""
 }
 
-func (x *LaunchContext) GetReleaseGeneration() int64 {
-	if x != nil {
-		return x.xxx_hidden_ReleaseGeneration
-	}
-	return 0
-}
-
 func (x *LaunchContext) GetClientVersion() string {
 	if x != nil {
 		if x.xxx_hidden_ClientVersion != nil {
@@ -8206,99 +8245,19 @@ func (x *LaunchContext) GetClientVersion() string {
 	return ""
 }
 
-func (x *LaunchContext) GetArtifactSha256() string {
-	if x != nil {
-		if x.xxx_hidden_ArtifactSha256 != nil {
-			return *x.xxx_hidden_ArtifactSha256
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *LaunchContext) GetBrowserRevision() string {
-	if x != nil {
-		if x.xxx_hidden_BrowserRevision != nil {
-			return *x.xxx_hidden_BrowserRevision
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *LaunchContext) GetBrowserArtifactSha256() string {
-	if x != nil {
-		if x.xxx_hidden_BrowserArtifactSha256 != nil {
-			return *x.xxx_hidden_BrowserArtifactSha256
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *LaunchContext) GetPlaywrightVersion() string {
-	if x != nil {
-		if x.xxx_hidden_PlaywrightVersion != nil {
-			return *x.xxx_hidden_PlaywrightVersion
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *LaunchContext) GetPlaywrightArtifactSha256() string {
-	if x != nil {
-		if x.xxx_hidden_PlaywrightArtifactSha256 != nil {
-			return *x.xxx_hidden_PlaywrightArtifactSha256
-		}
-		return ""
-	}
-	return ""
-}
-
 func (x *LaunchContext) SetInstallationId(v string) {
 	x.xxx_hidden_InstallationId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 9)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 3)
 }
 
 func (x *LaunchContext) SetDeviceId(v string) {
 	x.xxx_hidden_DeviceId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 9)
-}
-
-func (x *LaunchContext) SetReleaseGeneration(v int64) {
-	x.xxx_hidden_ReleaseGeneration = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 9)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 3)
 }
 
 func (x *LaunchContext) SetClientVersion(v string) {
 	x.xxx_hidden_ClientVersion = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 9)
-}
-
-func (x *LaunchContext) SetArtifactSha256(v string) {
-	x.xxx_hidden_ArtifactSha256 = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 9)
-}
-
-func (x *LaunchContext) SetBrowserRevision(v string) {
-	x.xxx_hidden_BrowserRevision = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 9)
-}
-
-func (x *LaunchContext) SetBrowserArtifactSha256(v string) {
-	x.xxx_hidden_BrowserArtifactSha256 = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 6, 9)
-}
-
-func (x *LaunchContext) SetPlaywrightVersion(v string) {
-	x.xxx_hidden_PlaywrightVersion = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 7, 9)
-}
-
-func (x *LaunchContext) SetPlaywrightArtifactSha256(v string) {
-	x.xxx_hidden_PlaywrightArtifactSha256 = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 8, 9)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 3)
 }
 
 func (x *LaunchContext) HasInstallationId() bool {
@@ -8315,53 +8274,11 @@ func (x *LaunchContext) HasDeviceId() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
 }
 
-func (x *LaunchContext) HasReleaseGeneration() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
-}
-
 func (x *LaunchContext) HasClientVersion() bool {
 	if x == nil {
 		return false
 	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
-}
-
-func (x *LaunchContext) HasArtifactSha256() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 4)
-}
-
-func (x *LaunchContext) HasBrowserRevision() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 5)
-}
-
-func (x *LaunchContext) HasBrowserArtifactSha256() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 6)
-}
-
-func (x *LaunchContext) HasPlaywrightVersion() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 7)
-}
-
-func (x *LaunchContext) HasPlaywrightArtifactSha256() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 8)
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
 }
 
 func (x *LaunchContext) ClearInstallationId() {
@@ -8374,53 +8291,17 @@ func (x *LaunchContext) ClearDeviceId() {
 	x.xxx_hidden_DeviceId = nil
 }
 
-func (x *LaunchContext) ClearReleaseGeneration() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
-	x.xxx_hidden_ReleaseGeneration = 0
-}
-
 func (x *LaunchContext) ClearClientVersion() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
 	x.xxx_hidden_ClientVersion = nil
-}
-
-func (x *LaunchContext) ClearArtifactSha256() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 4)
-	x.xxx_hidden_ArtifactSha256 = nil
-}
-
-func (x *LaunchContext) ClearBrowserRevision() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 5)
-	x.xxx_hidden_BrowserRevision = nil
-}
-
-func (x *LaunchContext) ClearBrowserArtifactSha256() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 6)
-	x.xxx_hidden_BrowserArtifactSha256 = nil
-}
-
-func (x *LaunchContext) ClearPlaywrightVersion() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 7)
-	x.xxx_hidden_PlaywrightVersion = nil
-}
-
-func (x *LaunchContext) ClearPlaywrightArtifactSha256() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 8)
-	x.xxx_hidden_PlaywrightArtifactSha256 = nil
 }
 
 type LaunchContext_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	InstallationId           *string
-	DeviceId                 *string
-	ReleaseGeneration        *int64
-	ClientVersion            *string
-	ArtifactSha256           *string
-	BrowserRevision          *string
-	BrowserArtifactSha256    *string
-	PlaywrightVersion        *string
-	PlaywrightArtifactSha256 *string
+	InstallationId *string
+	DeviceId       *string
+	ClientVersion  *string
 }
 
 func (b0 LaunchContext_builder) Build() *LaunchContext {
@@ -8428,52 +8309,25 @@ func (b0 LaunchContext_builder) Build() *LaunchContext {
 	b, x := &b0, m0
 	_, _ = b, x
 	if b.InstallationId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 9)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 3)
 		x.xxx_hidden_InstallationId = b.InstallationId
 	}
 	if b.DeviceId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 9)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 3)
 		x.xxx_hidden_DeviceId = b.DeviceId
 	}
-	if b.ReleaseGeneration != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 9)
-		x.xxx_hidden_ReleaseGeneration = *b.ReleaseGeneration
-	}
 	if b.ClientVersion != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 9)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 3)
 		x.xxx_hidden_ClientVersion = b.ClientVersion
-	}
-	if b.ArtifactSha256 != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 9)
-		x.xxx_hidden_ArtifactSha256 = b.ArtifactSha256
-	}
-	if b.BrowserRevision != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 9)
-		x.xxx_hidden_BrowserRevision = b.BrowserRevision
-	}
-	if b.BrowserArtifactSha256 != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 9)
-		x.xxx_hidden_BrowserArtifactSha256 = b.BrowserArtifactSha256
-	}
-	if b.PlaywrightVersion != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 7, 9)
-		x.xxx_hidden_PlaywrightVersion = b.PlaywrightVersion
-	}
-	if b.PlaywrightArtifactSha256 != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 8, 9)
-		x.xxx_hidden_PlaywrightArtifactSha256 = b.PlaywrightArtifactSha256
 	}
 	return m0
 }
 
 type LaunchEnvelope struct {
-	state                   protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_LaunchTicket *string                `protobuf:"bytes,1,opt,name=launch_ticket,json=launchTicket"`
-	xxx_hidden_Context      *LaunchContext         `protobuf:"bytes,2,opt,name=context"`
-	XXX_raceDetectHookData  protoimpl.RaceDetectHookData
-	XXX_presence            [1]uint32
-	unknownFields           protoimpl.UnknownFields
-	sizeCache               protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Context *LaunchContext         `protobuf:"bytes,1,opt,name=context"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *LaunchEnvelope) Reset() {
@@ -8501,16 +8355,6 @@ func (x *LaunchEnvelope) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *LaunchEnvelope) GetLaunchTicket() string {
-	if x != nil {
-		if x.xxx_hidden_LaunchTicket != nil {
-			return *x.xxx_hidden_LaunchTicket
-		}
-		return ""
-	}
-	return ""
-}
-
 func (x *LaunchEnvelope) GetContext() *LaunchContext {
 	if x != nil {
 		return x.xxx_hidden_Context
@@ -8518,20 +8362,8 @@ func (x *LaunchEnvelope) GetContext() *LaunchContext {
 	return nil
 }
 
-func (x *LaunchEnvelope) SetLaunchTicket(v string) {
-	x.xxx_hidden_LaunchTicket = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 2)
-}
-
 func (x *LaunchEnvelope) SetContext(v *LaunchContext) {
 	x.xxx_hidden_Context = v
-}
-
-func (x *LaunchEnvelope) HasLaunchTicket() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
 }
 
 func (x *LaunchEnvelope) HasContext() bool {
@@ -8541,11 +8373,6 @@ func (x *LaunchEnvelope) HasContext() bool {
 	return x.xxx_hidden_Context != nil
 }
 
-func (x *LaunchEnvelope) ClearLaunchTicket() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_LaunchTicket = nil
-}
-
 func (x *LaunchEnvelope) ClearContext() {
 	x.xxx_hidden_Context = nil
 }
@@ -8553,1165 +8380,14 @@ func (x *LaunchEnvelope) ClearContext() {
 type LaunchEnvelope_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	LaunchTicket *string
-	Context      *LaunchContext
+	Context *LaunchContext
 }
 
 func (b0 LaunchEnvelope_builder) Build() *LaunchEnvelope {
 	m0 := &LaunchEnvelope{}
 	b, x := &b0, m0
 	_, _ = b, x
-	if b.LaunchTicket != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 2)
-		x.xxx_hidden_LaunchTicket = b.LaunchTicket
-	}
 	x.xxx_hidden_Context = b.Context
-	return m0
-}
-
-type PinExchangeRequest struct {
-	state                     protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Pin            *string                `protobuf:"bytes,1,opt,name=pin"`
-	xxx_hidden_InstallationId *string                `protobuf:"bytes,2,opt,name=installation_id,json=installationId"`
-	xxx_hidden_DeviceId       *string                `protobuf:"bytes,3,opt,name=device_id,json=deviceId"`
-	XXX_raceDetectHookData    protoimpl.RaceDetectHookData
-	XXX_presence              [1]uint32
-	unknownFields             protoimpl.UnknownFields
-	sizeCache                 protoimpl.SizeCache
-}
-
-func (x *PinExchangeRequest) Reset() {
-	*x = PinExchangeRequest{}
-	mi := &file_cineko_client_client_proto_msgTypes[57]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PinExchangeRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PinExchangeRequest) ProtoMessage() {}
-
-func (x *PinExchangeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_client_proto_msgTypes[57]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *PinExchangeRequest) GetPin() string {
-	if x != nil {
-		if x.xxx_hidden_Pin != nil {
-			return *x.xxx_hidden_Pin
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *PinExchangeRequest) GetInstallationId() string {
-	if x != nil {
-		if x.xxx_hidden_InstallationId != nil {
-			return *x.xxx_hidden_InstallationId
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *PinExchangeRequest) GetDeviceId() string {
-	if x != nil {
-		if x.xxx_hidden_DeviceId != nil {
-			return *x.xxx_hidden_DeviceId
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *PinExchangeRequest) SetPin(v string) {
-	x.xxx_hidden_Pin = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 3)
-}
-
-func (x *PinExchangeRequest) SetInstallationId(v string) {
-	x.xxx_hidden_InstallationId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 3)
-}
-
-func (x *PinExchangeRequest) SetDeviceId(v string) {
-	x.xxx_hidden_DeviceId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 3)
-}
-
-func (x *PinExchangeRequest) HasPin() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
-}
-
-func (x *PinExchangeRequest) HasInstallationId() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
-}
-
-func (x *PinExchangeRequest) HasDeviceId() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
-}
-
-func (x *PinExchangeRequest) ClearPin() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_Pin = nil
-}
-
-func (x *PinExchangeRequest) ClearInstallationId() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
-	x.xxx_hidden_InstallationId = nil
-}
-
-func (x *PinExchangeRequest) ClearDeviceId() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
-	x.xxx_hidden_DeviceId = nil
-}
-
-type PinExchangeRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Pin            *string
-	InstallationId *string
-	DeviceId       *string
-}
-
-func (b0 PinExchangeRequest_builder) Build() *PinExchangeRequest {
-	m0 := &PinExchangeRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	if b.Pin != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 3)
-		x.xxx_hidden_Pin = b.Pin
-	}
-	if b.InstallationId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 3)
-		x.xxx_hidden_InstallationId = b.InstallationId
-	}
-	if b.DeviceId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 3)
-		x.xxx_hidden_DeviceId = b.DeviceId
-	}
-	return m0
-}
-
-type TokenExchangeRequest struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_UserId      *string                `protobuf:"bytes,1,opt,name=user_id,json=userId"`
-	xxx_hidden_AccessToken *string                `protobuf:"bytes,2,opt,name=access_token,json=accessToken"`
-	XXX_raceDetectHookData protoimpl.RaceDetectHookData
-	XXX_presence           [1]uint32
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
-}
-
-func (x *TokenExchangeRequest) Reset() {
-	*x = TokenExchangeRequest{}
-	mi := &file_cineko_client_client_proto_msgTypes[58]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *TokenExchangeRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*TokenExchangeRequest) ProtoMessage() {}
-
-func (x *TokenExchangeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_client_proto_msgTypes[58]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *TokenExchangeRequest) GetUserId() string {
-	if x != nil {
-		if x.xxx_hidden_UserId != nil {
-			return *x.xxx_hidden_UserId
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *TokenExchangeRequest) GetAccessToken() string {
-	if x != nil {
-		if x.xxx_hidden_AccessToken != nil {
-			return *x.xxx_hidden_AccessToken
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *TokenExchangeRequest) SetUserId(v string) {
-	x.xxx_hidden_UserId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 2)
-}
-
-func (x *TokenExchangeRequest) SetAccessToken(v string) {
-	x.xxx_hidden_AccessToken = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
-}
-
-func (x *TokenExchangeRequest) HasUserId() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
-}
-
-func (x *TokenExchangeRequest) HasAccessToken() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
-}
-
-func (x *TokenExchangeRequest) ClearUserId() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_UserId = nil
-}
-
-func (x *TokenExchangeRequest) ClearAccessToken() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
-	x.xxx_hidden_AccessToken = nil
-}
-
-type TokenExchangeRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	UserId      *string
-	AccessToken *string
-}
-
-func (b0 TokenExchangeRequest_builder) Build() *TokenExchangeRequest {
-	m0 := &TokenExchangeRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	if b.UserId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 2)
-		x.xxx_hidden_UserId = b.UserId
-	}
-	if b.AccessToken != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
-		x.xxx_hidden_AccessToken = b.AccessToken
-	}
-	return m0
-}
-
-type TokenRefreshRequest struct {
-	state                   protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_RefreshToken *string                `protobuf:"bytes,1,opt,name=refresh_token,json=refreshToken"`
-	XXX_raceDetectHookData  protoimpl.RaceDetectHookData
-	XXX_presence            [1]uint32
-	unknownFields           protoimpl.UnknownFields
-	sizeCache               protoimpl.SizeCache
-}
-
-func (x *TokenRefreshRequest) Reset() {
-	*x = TokenRefreshRequest{}
-	mi := &file_cineko_client_client_proto_msgTypes[59]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *TokenRefreshRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*TokenRefreshRequest) ProtoMessage() {}
-
-func (x *TokenRefreshRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_client_proto_msgTypes[59]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *TokenRefreshRequest) GetRefreshToken() string {
-	if x != nil {
-		if x.xxx_hidden_RefreshToken != nil {
-			return *x.xxx_hidden_RefreshToken
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *TokenRefreshRequest) SetRefreshToken(v string) {
-	x.xxx_hidden_RefreshToken = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 1)
-}
-
-func (x *TokenRefreshRequest) HasRefreshToken() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
-}
-
-func (x *TokenRefreshRequest) ClearRefreshToken() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_RefreshToken = nil
-}
-
-type TokenRefreshRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	RefreshToken *string
-}
-
-func (b0 TokenRefreshRequest_builder) Build() *TokenRefreshRequest {
-	m0 := &TokenRefreshRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	if b.RefreshToken != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 1)
-		x.xxx_hidden_RefreshToken = b.RefreshToken
-	}
-	return m0
-}
-
-type AuthenticationResponse struct {
-	state                       protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_AccessToken      *string                `protobuf:"bytes,1,opt,name=access_token,json=accessToken"`
-	xxx_hidden_ExpiresAt        *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=expires_at,json=expiresAt"`
-	xxx_hidden_RefreshToken     *string                `protobuf:"bytes,3,opt,name=refresh_token,json=refreshToken"`
-	xxx_hidden_RefreshExpiresAt *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=refresh_expires_at,json=refreshExpiresAt"`
-	xxx_hidden_User             *User                  `protobuf:"bytes,5,opt,name=user"`
-	xxx_hidden_Launch           *LaunchContext         `protobuf:"bytes,6,opt,name=launch"`
-	XXX_raceDetectHookData      protoimpl.RaceDetectHookData
-	XXX_presence                [1]uint32
-	unknownFields               protoimpl.UnknownFields
-	sizeCache                   protoimpl.SizeCache
-}
-
-func (x *AuthenticationResponse) Reset() {
-	*x = AuthenticationResponse{}
-	mi := &file_cineko_client_client_proto_msgTypes[60]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AuthenticationResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AuthenticationResponse) ProtoMessage() {}
-
-func (x *AuthenticationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_client_proto_msgTypes[60]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *AuthenticationResponse) GetAccessToken() string {
-	if x != nil {
-		if x.xxx_hidden_AccessToken != nil {
-			return *x.xxx_hidden_AccessToken
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *AuthenticationResponse) GetExpiresAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.xxx_hidden_ExpiresAt
-	}
-	return nil
-}
-
-func (x *AuthenticationResponse) GetRefreshToken() string {
-	if x != nil {
-		if x.xxx_hidden_RefreshToken != nil {
-			return *x.xxx_hidden_RefreshToken
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *AuthenticationResponse) GetRefreshExpiresAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.xxx_hidden_RefreshExpiresAt
-	}
-	return nil
-}
-
-func (x *AuthenticationResponse) GetUser() *User {
-	if x != nil {
-		return x.xxx_hidden_User
-	}
-	return nil
-}
-
-func (x *AuthenticationResponse) GetLaunch() *LaunchContext {
-	if x != nil {
-		return x.xxx_hidden_Launch
-	}
-	return nil
-}
-
-func (x *AuthenticationResponse) SetAccessToken(v string) {
-	x.xxx_hidden_AccessToken = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 6)
-}
-
-func (x *AuthenticationResponse) SetExpiresAt(v *timestamppb.Timestamp) {
-	x.xxx_hidden_ExpiresAt = v
-}
-
-func (x *AuthenticationResponse) SetRefreshToken(v string) {
-	x.xxx_hidden_RefreshToken = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 6)
-}
-
-func (x *AuthenticationResponse) SetRefreshExpiresAt(v *timestamppb.Timestamp) {
-	x.xxx_hidden_RefreshExpiresAt = v
-}
-
-func (x *AuthenticationResponse) SetUser(v *User) {
-	x.xxx_hidden_User = v
-}
-
-func (x *AuthenticationResponse) SetLaunch(v *LaunchContext) {
-	x.xxx_hidden_Launch = v
-}
-
-func (x *AuthenticationResponse) HasAccessToken() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
-}
-
-func (x *AuthenticationResponse) HasExpiresAt() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_ExpiresAt != nil
-}
-
-func (x *AuthenticationResponse) HasRefreshToken() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
-}
-
-func (x *AuthenticationResponse) HasRefreshExpiresAt() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_RefreshExpiresAt != nil
-}
-
-func (x *AuthenticationResponse) HasUser() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_User != nil
-}
-
-func (x *AuthenticationResponse) HasLaunch() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Launch != nil
-}
-
-func (x *AuthenticationResponse) ClearAccessToken() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_AccessToken = nil
-}
-
-func (x *AuthenticationResponse) ClearExpiresAt() {
-	x.xxx_hidden_ExpiresAt = nil
-}
-
-func (x *AuthenticationResponse) ClearRefreshToken() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
-	x.xxx_hidden_RefreshToken = nil
-}
-
-func (x *AuthenticationResponse) ClearRefreshExpiresAt() {
-	x.xxx_hidden_RefreshExpiresAt = nil
-}
-
-func (x *AuthenticationResponse) ClearUser() {
-	x.xxx_hidden_User = nil
-}
-
-func (x *AuthenticationResponse) ClearLaunch() {
-	x.xxx_hidden_Launch = nil
-}
-
-type AuthenticationResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	AccessToken      *string
-	ExpiresAt        *timestamppb.Timestamp
-	RefreshToken     *string
-	RefreshExpiresAt *timestamppb.Timestamp
-	User             *User
-	Launch           *LaunchContext
-}
-
-func (b0 AuthenticationResponse_builder) Build() *AuthenticationResponse {
-	m0 := &AuthenticationResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	if b.AccessToken != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 6)
-		x.xxx_hidden_AccessToken = b.AccessToken
-	}
-	x.xxx_hidden_ExpiresAt = b.ExpiresAt
-	if b.RefreshToken != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 6)
-		x.xxx_hidden_RefreshToken = b.RefreshToken
-	}
-	x.xxx_hidden_RefreshExpiresAt = b.RefreshExpiresAt
-	x.xxx_hidden_User = b.User
-	x.xxx_hidden_Launch = b.Launch
-	return m0
-}
-
-type LaunchTicketRequest struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Context     *LaunchContext         `protobuf:"bytes,1,opt,name=context"`
-	xxx_hidden_Nonce       *string                `protobuf:"bytes,2,opt,name=nonce"`
-	XXX_raceDetectHookData protoimpl.RaceDetectHookData
-	XXX_presence           [1]uint32
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
-}
-
-func (x *LaunchTicketRequest) Reset() {
-	*x = LaunchTicketRequest{}
-	mi := &file_cineko_client_client_proto_msgTypes[61]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *LaunchTicketRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*LaunchTicketRequest) ProtoMessage() {}
-
-func (x *LaunchTicketRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_client_proto_msgTypes[61]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *LaunchTicketRequest) GetContext() *LaunchContext {
-	if x != nil {
-		return x.xxx_hidden_Context
-	}
-	return nil
-}
-
-func (x *LaunchTicketRequest) GetNonce() string {
-	if x != nil {
-		if x.xxx_hidden_Nonce != nil {
-			return *x.xxx_hidden_Nonce
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *LaunchTicketRequest) SetContext(v *LaunchContext) {
-	x.xxx_hidden_Context = v
-}
-
-func (x *LaunchTicketRequest) SetNonce(v string) {
-	x.xxx_hidden_Nonce = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
-}
-
-func (x *LaunchTicketRequest) HasContext() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Context != nil
-}
-
-func (x *LaunchTicketRequest) HasNonce() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
-}
-
-func (x *LaunchTicketRequest) ClearContext() {
-	x.xxx_hidden_Context = nil
-}
-
-func (x *LaunchTicketRequest) ClearNonce() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
-	x.xxx_hidden_Nonce = nil
-}
-
-type LaunchTicketRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Context *LaunchContext
-	Nonce   *string
-}
-
-func (b0 LaunchTicketRequest_builder) Build() *LaunchTicketRequest {
-	m0 := &LaunchTicketRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Context = b.Context
-	if b.Nonce != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
-		x.xxx_hidden_Nonce = b.Nonce
-	}
-	return m0
-}
-
-type LaunchTicketResponse struct {
-	state                   protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_LaunchTicket *string                `protobuf:"bytes,1,opt,name=launch_ticket,json=launchTicket"`
-	xxx_hidden_ExpiresAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=expires_at,json=expiresAt"`
-	XXX_raceDetectHookData  protoimpl.RaceDetectHookData
-	XXX_presence            [1]uint32
-	unknownFields           protoimpl.UnknownFields
-	sizeCache               protoimpl.SizeCache
-}
-
-func (x *LaunchTicketResponse) Reset() {
-	*x = LaunchTicketResponse{}
-	mi := &file_cineko_client_client_proto_msgTypes[62]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *LaunchTicketResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*LaunchTicketResponse) ProtoMessage() {}
-
-func (x *LaunchTicketResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_client_proto_msgTypes[62]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *LaunchTicketResponse) GetLaunchTicket() string {
-	if x != nil {
-		if x.xxx_hidden_LaunchTicket != nil {
-			return *x.xxx_hidden_LaunchTicket
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *LaunchTicketResponse) GetExpiresAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.xxx_hidden_ExpiresAt
-	}
-	return nil
-}
-
-func (x *LaunchTicketResponse) SetLaunchTicket(v string) {
-	x.xxx_hidden_LaunchTicket = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 2)
-}
-
-func (x *LaunchTicketResponse) SetExpiresAt(v *timestamppb.Timestamp) {
-	x.xxx_hidden_ExpiresAt = v
-}
-
-func (x *LaunchTicketResponse) HasLaunchTicket() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
-}
-
-func (x *LaunchTicketResponse) HasExpiresAt() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_ExpiresAt != nil
-}
-
-func (x *LaunchTicketResponse) ClearLaunchTicket() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_LaunchTicket = nil
-}
-
-func (x *LaunchTicketResponse) ClearExpiresAt() {
-	x.xxx_hidden_ExpiresAt = nil
-}
-
-type LaunchTicketResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	LaunchTicket *string
-	ExpiresAt    *timestamppb.Timestamp
-}
-
-func (b0 LaunchTicketResponse_builder) Build() *LaunchTicketResponse {
-	m0 := &LaunchTicketResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	if b.LaunchTicket != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 2)
-		x.xxx_hidden_LaunchTicket = b.LaunchTicket
-	}
-	x.xxx_hidden_ExpiresAt = b.ExpiresAt
-	return m0
-}
-
-type ProbeBootstrapTicketRequest struct {
-	state                     protoimpl.MessageState     `protogen:"opaque.v1"`
-	xxx_hidden_InstallationId *string                    `protobuf:"bytes,1,opt,name=installation_id,json=installationId"`
-	xxx_hidden_DeviceId       *string                    `protobuf:"bytes,2,opt,name=device_id,json=deviceId"`
-	xxx_hidden_Capabilities   *[]*observation.Capability `protobuf:"bytes,3,rep,name=capabilities"`
-	xxx_hidden_MaxConcurrency int32                      `protobuf:"varint,4,opt,name=max_concurrency,json=maxConcurrency"`
-	xxx_hidden_Runtime        *common.Runtime            `protobuf:"bytes,5,opt,name=runtime"`
-	XXX_raceDetectHookData    protoimpl.RaceDetectHookData
-	XXX_presence              [1]uint32
-	unknownFields             protoimpl.UnknownFields
-	sizeCache                 protoimpl.SizeCache
-}
-
-func (x *ProbeBootstrapTicketRequest) Reset() {
-	*x = ProbeBootstrapTicketRequest{}
-	mi := &file_cineko_client_client_proto_msgTypes[63]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ProbeBootstrapTicketRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ProbeBootstrapTicketRequest) ProtoMessage() {}
-
-func (x *ProbeBootstrapTicketRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_client_proto_msgTypes[63]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *ProbeBootstrapTicketRequest) GetInstallationId() string {
-	if x != nil {
-		if x.xxx_hidden_InstallationId != nil {
-			return *x.xxx_hidden_InstallationId
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *ProbeBootstrapTicketRequest) GetDeviceId() string {
-	if x != nil {
-		if x.xxx_hidden_DeviceId != nil {
-			return *x.xxx_hidden_DeviceId
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *ProbeBootstrapTicketRequest) GetCapabilities() []*observation.Capability {
-	if x != nil {
-		if x.xxx_hidden_Capabilities != nil {
-			return *x.xxx_hidden_Capabilities
-		}
-	}
-	return nil
-}
-
-func (x *ProbeBootstrapTicketRequest) GetMaxConcurrency() int32 {
-	if x != nil {
-		return x.xxx_hidden_MaxConcurrency
-	}
-	return 0
-}
-
-func (x *ProbeBootstrapTicketRequest) GetRuntime() *common.Runtime {
-	if x != nil {
-		return x.xxx_hidden_Runtime
-	}
-	return nil
-}
-
-func (x *ProbeBootstrapTicketRequest) SetInstallationId(v string) {
-	x.xxx_hidden_InstallationId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 5)
-}
-
-func (x *ProbeBootstrapTicketRequest) SetDeviceId(v string) {
-	x.xxx_hidden_DeviceId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 5)
-}
-
-func (x *ProbeBootstrapTicketRequest) SetCapabilities(v []*observation.Capability) {
-	x.xxx_hidden_Capabilities = &v
-}
-
-func (x *ProbeBootstrapTicketRequest) SetMaxConcurrency(v int32) {
-	x.xxx_hidden_MaxConcurrency = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 5)
-}
-
-func (x *ProbeBootstrapTicketRequest) SetRuntime(v *common.Runtime) {
-	x.xxx_hidden_Runtime = v
-}
-
-func (x *ProbeBootstrapTicketRequest) HasInstallationId() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
-}
-
-func (x *ProbeBootstrapTicketRequest) HasDeviceId() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
-}
-
-func (x *ProbeBootstrapTicketRequest) HasMaxConcurrency() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
-}
-
-func (x *ProbeBootstrapTicketRequest) HasRuntime() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Runtime != nil
-}
-
-func (x *ProbeBootstrapTicketRequest) ClearInstallationId() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_InstallationId = nil
-}
-
-func (x *ProbeBootstrapTicketRequest) ClearDeviceId() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
-	x.xxx_hidden_DeviceId = nil
-}
-
-func (x *ProbeBootstrapTicketRequest) ClearMaxConcurrency() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
-	x.xxx_hidden_MaxConcurrency = 0
-}
-
-func (x *ProbeBootstrapTicketRequest) ClearRuntime() {
-	x.xxx_hidden_Runtime = nil
-}
-
-type ProbeBootstrapTicketRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	InstallationId *string
-	DeviceId       *string
-	Capabilities   []*observation.Capability
-	MaxConcurrency *int32
-	Runtime        *common.Runtime
-}
-
-func (b0 ProbeBootstrapTicketRequest_builder) Build() *ProbeBootstrapTicketRequest {
-	m0 := &ProbeBootstrapTicketRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	if b.InstallationId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 5)
-		x.xxx_hidden_InstallationId = b.InstallationId
-	}
-	if b.DeviceId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 5)
-		x.xxx_hidden_DeviceId = b.DeviceId
-	}
-	x.xxx_hidden_Capabilities = &b.Capabilities
-	if b.MaxConcurrency != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 5)
-		x.xxx_hidden_MaxConcurrency = *b.MaxConcurrency
-	}
-	x.xxx_hidden_Runtime = b.Runtime
-	return m0
-}
-
-type ProbeBootstrapTicketResponse struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Ticket      *string                `protobuf:"bytes,1,opt,name=ticket"`
-	xxx_hidden_ExpiresAt   *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=expires_at,json=expiresAt"`
-	XXX_raceDetectHookData protoimpl.RaceDetectHookData
-	XXX_presence           [1]uint32
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
-}
-
-func (x *ProbeBootstrapTicketResponse) Reset() {
-	*x = ProbeBootstrapTicketResponse{}
-	mi := &file_cineko_client_client_proto_msgTypes[64]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ProbeBootstrapTicketResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ProbeBootstrapTicketResponse) ProtoMessage() {}
-
-func (x *ProbeBootstrapTicketResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_client_proto_msgTypes[64]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *ProbeBootstrapTicketResponse) GetTicket() string {
-	if x != nil {
-		if x.xxx_hidden_Ticket != nil {
-			return *x.xxx_hidden_Ticket
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *ProbeBootstrapTicketResponse) GetExpiresAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.xxx_hidden_ExpiresAt
-	}
-	return nil
-}
-
-func (x *ProbeBootstrapTicketResponse) SetTicket(v string) {
-	x.xxx_hidden_Ticket = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 2)
-}
-
-func (x *ProbeBootstrapTicketResponse) SetExpiresAt(v *timestamppb.Timestamp) {
-	x.xxx_hidden_ExpiresAt = v
-}
-
-func (x *ProbeBootstrapTicketResponse) HasTicket() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
-}
-
-func (x *ProbeBootstrapTicketResponse) HasExpiresAt() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_ExpiresAt != nil
-}
-
-func (x *ProbeBootstrapTicketResponse) ClearTicket() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_Ticket = nil
-}
-
-func (x *ProbeBootstrapTicketResponse) ClearExpiresAt() {
-	x.xxx_hidden_ExpiresAt = nil
-}
-
-type ProbeBootstrapTicketResponse_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Ticket    *string
-	ExpiresAt *timestamppb.Timestamp
-}
-
-func (b0 ProbeBootstrapTicketResponse_builder) Build() *ProbeBootstrapTicketResponse {
-	m0 := &ProbeBootstrapTicketResponse{}
-	b, x := &b0, m0
-	_, _ = b, x
-	if b.Ticket != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 2)
-		x.xxx_hidden_Ticket = b.Ticket
-	}
-	x.xxx_hidden_ExpiresAt = b.ExpiresAt
-	return m0
-}
-
-type SessionExchangeRequest struct {
-	state                   protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_LaunchTicket *string                `protobuf:"bytes,1,opt,name=launch_ticket,json=launchTicket"`
-	xxx_hidden_ClientNonce  *string                `protobuf:"bytes,2,opt,name=client_nonce,json=clientNonce"`
-	XXX_raceDetectHookData  protoimpl.RaceDetectHookData
-	XXX_presence            [1]uint32
-	unknownFields           protoimpl.UnknownFields
-	sizeCache               protoimpl.SizeCache
-}
-
-func (x *SessionExchangeRequest) Reset() {
-	*x = SessionExchangeRequest{}
-	mi := &file_cineko_client_client_proto_msgTypes[65]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SessionExchangeRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SessionExchangeRequest) ProtoMessage() {}
-
-func (x *SessionExchangeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_client_proto_msgTypes[65]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *SessionExchangeRequest) GetLaunchTicket() string {
-	if x != nil {
-		if x.xxx_hidden_LaunchTicket != nil {
-			return *x.xxx_hidden_LaunchTicket
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *SessionExchangeRequest) GetClientNonce() string {
-	if x != nil {
-		if x.xxx_hidden_ClientNonce != nil {
-			return *x.xxx_hidden_ClientNonce
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *SessionExchangeRequest) SetLaunchTicket(v string) {
-	x.xxx_hidden_LaunchTicket = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 2)
-}
-
-func (x *SessionExchangeRequest) SetClientNonce(v string) {
-	x.xxx_hidden_ClientNonce = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
-}
-
-func (x *SessionExchangeRequest) HasLaunchTicket() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
-}
-
-func (x *SessionExchangeRequest) HasClientNonce() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
-}
-
-func (x *SessionExchangeRequest) ClearLaunchTicket() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_LaunchTicket = nil
-}
-
-func (x *SessionExchangeRequest) ClearClientNonce() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
-	x.xxx_hidden_ClientNonce = nil
-}
-
-type SessionExchangeRequest_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	LaunchTicket *string
-	ClientNonce  *string
-}
-
-func (b0 SessionExchangeRequest_builder) Build() *SessionExchangeRequest {
-	m0 := &SessionExchangeRequest{}
-	b, x := &b0, m0
-	_, _ = b, x
-	if b.LaunchTicket != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 2)
-		x.xxx_hidden_LaunchTicket = b.LaunchTicket
-	}
-	if b.ClientNonce != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
-		x.xxx_hidden_ClientNonce = b.ClientNonce
-	}
 	return m0
 }
 
@@ -9726,7 +8402,7 @@ type SeatMapRequest struct {
 
 func (x *SeatMapRequest) Reset() {
 	*x = SeatMapRequest{}
-	mi := &file_cineko_client_client_proto_msgTypes[66]
+	mi := &file_cineko_client_client_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9738,7 +8414,7 @@ func (x *SeatMapRequest) String() string {
 func (*SeatMapRequest) ProtoMessage() {}
 
 func (x *SeatMapRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_client_proto_msgTypes[66]
+	mi := &file_cineko_client_client_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9802,7 +8478,7 @@ type AuditoriumResponse struct {
 
 func (x *AuditoriumResponse) Reset() {
 	*x = AuditoriumResponse{}
-	mi := &file_cineko_client_client_proto_msgTypes[67]
+	mi := &file_cineko_client_client_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9814,7 +8490,7 @@ func (x *AuditoriumResponse) String() string {
 func (*AuditoriumResponse) ProtoMessage() {}
 
 func (x *AuditoriumResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_client_proto_msgTypes[67]
+	mi := &file_cineko_client_client_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9915,29 +8591,28 @@ const file_cineko_client_client_proto_rawDesc = "" +
 	"\x0fpreferred_types\x18\x04 \x03(\tR\x0epreferredTypes\x12\x1a\n" +
 	"\btogether\x18\x05 \x01(\bR\btogether\x12\x1f\n" +
 	"\vavoid_edges\x18\x06 \x01(\bR\n" +
-	"avoidEdges\"\xe6\x02\n" +
+	"avoidEdges\"\xc7\x02\n" +
 	"\x06Preset\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1d\n" +
 	"\n" +
 	"theater_id\x18\x04 \x01(\tR\ttheaterId\x12#\n" +
-	"\rauditorium_id\x18\x05 \x01(\tR\fauditoriumId\x12\x1d\n" +
+	"\rauditorium_id\x18\x05 \x01(\tR\fauditoriumId\x12F\n" +
+	"\x0fseat_preference\x18\x06 \x01(\v2\x1d.cineko.client.SeatPreferenceR\x0eseatPreference\x129\n" +
 	"\n" +
-	"seat_count\x18\x06 \x01(\x05R\tseatCount\x12F\n" +
-	"\x0fseat_preference\x18\a \x01(\v2\x1d.cineko.client.SeatPreferenceR\x0eseatPreference\x129\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
-	"\n" +
-	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x10\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x10\n" +
 	"\x0eMonitorPending\"\x10\n" +
 	"\x0eMonitorRunning\"\x12\n" +
 	"\x10MonitorTriggered\"\x17\n" +
 	"\x15MonitorPaymentUnknown\"\x0f\n" +
 	"\rMonitorBooked\"'\n" +
 	"\rMonitorFailed\x12\x16\n" +
-	"\x06reason\x18\x01 \x01(\tR\x06reason\"\x10\n" +
-	"\x0eMonitorStopped\"\xd1\x03\n" +
+	"\x06reason\x18\x01 \x01(\tR\x06reason\"(\n" +
+	"\x0eMonitorStopped\x12\x16\n" +
+	"\x06reason\x18\x01 \x01(\tR\x06reason\"\xd1\x03\n" +
 	"\fMonitorState\x129\n" +
 	"\apending\x18\x01 \x01(\v2\x1d.cineko.client.MonitorPendingH\x00R\apending\x129\n" +
 	"\arunning\x18\x02 \x01(\v2\x1d.cineko.client.MonitorRunningH\x00R\arunning\x12?\n" +
@@ -9946,29 +8621,31 @@ const file_cineko_client_client_proto_rawDesc = "" +
 	"\x06failed\x18\x05 \x01(\v2\x1c.cineko.client.MonitorFailedH\x00R\x06failed\x129\n" +
 	"\astopped\x18\x06 \x01(\v2\x1d.cineko.client.MonitorStoppedH\x00R\astopped\x12O\n" +
 	"\x0fpayment_unknown\x18\a \x01(\v2$.cineko.client.MonitorPaymentUnknownH\x00R\x0epaymentUnknownB\x0e\n" +
-	"\x05state\x12\x05\xbaH\x02\b\x01\"\xd0\x05\n" +
+	"\x05state\x12\x05\xbaH\x02\b\x01\"\xd8\x05\n" +
 	"\aMonitor\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1b\n" +
 	"\tpreset_id\x18\x03 \x01(\tR\bpresetId\x12\x19\n" +
 	"\bmovie_id\x18\x04 \x01(\tR\amovieId\x12\x1f\n" +
 	"\vmovie_title\x18\x05 \x01(\tR\n" +
-	"movieTitle\x12E\n" +
-	"\ftarget_dates\x18\x06 \x03(\v2\x18.cineko.common.LocalDateB\b\xbaH\x05\x92\x01\x02\x10\x0eR\vtargetDates\x123\n" +
-	"\x0ftarget_weekdays\x18\a \x03(\x05B\n" +
-	"\xbaH\a\x92\x01\x04\x10\a\x18\x01R\x0etargetWeekdays\x129\n" +
-	"\x13search_horizon_days\x18\b \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x0e(\x01R\x11searchHorizonDays\x12=\n" +
-	"\rearliest_time\x18\t \x01(\v2\x18.cineko.common.LocalTimeR\fearliestTime\x129\n" +
-	"\vlatest_time\x18\n" +
-	" \x01(\v2\x18.cineko.common.LocalTimeR\n" +
+	"movieTitle\x123\n" +
+	"\x0ftarget_weekdays\x18\x06 \x03(\x05B\n" +
+	"\xbaH\a\x92\x01\x04\x10\a\x18\x01R\x0etargetWeekdays\x12=\n" +
+	"\rearliest_time\x18\a \x01(\v2\x18.cineko.common.LocalTimeR\fearliestTime\x129\n" +
+	"\vlatest_time\x18\b \x01(\v2\x18.cineko.common.LocalTimeR\n" +
 	"latestTime\x121\n" +
-	"\x05state\x18\v \x01(\v2\x1b.cineko.client.MonitorStateR\x05state\x12B\n" +
-	"\x0flast_checked_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\rlastCheckedAt\x12%\n" +
-	"\x0ereservation_id\x18\r \x01(\tR\rreservationId\x129\n" +
+	"\x05state\x18\t \x01(\v2\x1b.cineko.client.MonitorStateR\x05state\x12B\n" +
+	"\x0flast_checked_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\rlastCheckedAt\x12%\n" +
+	"\x0ereservation_id\x18\v \x01(\tR\rreservationId\x129\n" +
 	"\n" +
-	"created_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"created_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xb5\x06\n" +
+	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12(\n" +
+	"\n" +
+	"seat_count\x18\x0e \x01(\x05B\t\xbaH\x06\x1a\x04\x18\b(\x01R\tseatCount\x12$\n" +
+	"\tseat_type\x18\x0f \x01(\tB\a\xbaH\x04r\x02\x10\x01R\bseatType\x128\n" +
+	"\x18watch_cancellation_seats\x18\x10 \x01(\bR\x16watchCancellationSeats\"\xb5\x06\n" +
 	"\vReservation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1d\n" +
@@ -10125,75 +8802,20 @@ const file_cineko_client_client_proto_rawDesc = "" +
 	"\theartbeat\x18\x03 \x01(\v2\x1e.cineko.client.StreamHeartbeatH\x00R\theartbeat\x12B\n" +
 	"\rretention_gap\x18\x04 \x01(\v2\x1b.cineko.client.RetentionGapH\x00R\fretentionGap\x12E\n" +
 	"\x0einvalid_cursor\x18\x05 \x01(\v2\x1c.cineko.client.InvalidCursorH\x00R\rinvalidCursorB\x10\n" +
-	"\acontrol\x12\x05\xbaH\x02\b\x01\"\xa4\x03\n" +
+	"\acontrol\x12\x05\xbaH\x02\b\x01\"|\n" +
 	"\rLaunchContext\x12'\n" +
 	"\x0finstallation_id\x18\x01 \x01(\tR\x0einstallationId\x12\x1b\n" +
-	"\tdevice_id\x18\x02 \x01(\tR\bdeviceId\x12-\n" +
-	"\x12release_generation\x18\x03 \x01(\x03R\x11releaseGeneration\x12%\n" +
-	"\x0eclient_version\x18\x04 \x01(\tR\rclientVersion\x12'\n" +
-	"\x0fartifact_sha256\x18\x05 \x01(\tR\x0eartifactSha256\x12)\n" +
-	"\x10browser_revision\x18\x06 \x01(\tR\x0fbrowserRevision\x126\n" +
-	"\x17browser_artifact_sha256\x18\a \x01(\tR\x15browserArtifactSha256\x12-\n" +
-	"\x12playwright_version\x18\b \x01(\tR\x11playwrightVersion\x12<\n" +
-	"\x1aplaywright_artifact_sha256\x18\t \x01(\tR\x18playwrightArtifactSha256\"m\n" +
-	"\x0eLaunchEnvelope\x12#\n" +
-	"\rlaunch_ticket\x18\x01 \x01(\tR\flaunchTicket\x126\n" +
-	"\acontext\x18\x02 \x01(\v2\x1c.cineko.client.LaunchContextR\acontext\"\x91\x01\n" +
-	"\x12PinExchangeRequest\x12\x1d\n" +
-	"\x03pin\x18\x01 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\x98\x01\x06R\x03pin\x123\n" +
-	"\x0finstallation_id\x18\x02 \x01(\tB\n" +
-	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\x0einstallationId\x12'\n" +
-	"\tdevice_id\x18\x03 \x01(\tB\n" +
-	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\bdeviceId\"j\n" +
-	"\x14TokenExchangeRequest\x12#\n" +
-	"\auser_id\x18\x01 \x01(\tB\n" +
-	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\x06userId\x12-\n" +
-	"\faccess_token\x18\x02 \x01(\tB\n" +
-	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\vaccessToken\"F\n" +
-	"\x13TokenRefreshRequest\x12/\n" +
-	"\rrefresh_token\x18\x01 \x01(\tB\n" +
-	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\frefreshToken\"\xc4\x02\n" +
-	"\x16AuthenticationResponse\x12!\n" +
-	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x129\n" +
-	"\n" +
-	"expires_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12#\n" +
-	"\rrefresh_token\x18\x03 \x01(\tR\frefreshToken\x12H\n" +
-	"\x12refresh_expires_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\x10refreshExpiresAt\x12'\n" +
-	"\x04user\x18\x05 \x01(\v2\x13.cineko.client.UserR\x04user\x124\n" +
-	"\x06launch\x18\x06 \x01(\v2\x1c.cineko.client.LaunchContextR\x06launch\"w\n" +
-	"\x13LaunchTicketRequest\x12>\n" +
-	"\acontext\x18\x01 \x01(\v2\x1c.cineko.client.LaunchContextB\x06\xbaH\x03\xc8\x01\x01R\acontext\x12 \n" +
-	"\x05nonce\x18\x02 \x01(\tB\n" +
-	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\x05nonce\"v\n" +
-	"\x14LaunchTicketResponse\x12#\n" +
-	"\rlaunch_ticket\x18\x01 \x01(\tR\flaunchTicket\x129\n" +
-	"\n" +
-	"expires_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"\xb8\x02\n" +
-	"\x1bProbeBootstrapTicketRequest\x123\n" +
-	"\x0finstallation_id\x18\x01 \x01(\tB\n" +
-	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\x0einstallationId\x12'\n" +
-	"\tdevice_id\x18\x02 \x01(\tB\n" +
-	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\bdeviceId\x12L\n" +
-	"\fcapabilities\x18\x03 \x03(\v2\x1e.cineko.observation.CapabilityB\b\xbaH\x05\x92\x01\x02\b\x01R\fcapabilities\x123\n" +
-	"\x0fmax_concurrency\x18\x04 \x01(\x05B\n" +
-	"\xbaH\a\xc8\x01\x01\x1a\x02 \x00R\x0emaxConcurrency\x128\n" +
-	"\aruntime\x18\x05 \x01(\v2\x16.cineko.common.RuntimeB\x06\xbaH\x03\xc8\x01\x01R\aruntime\"q\n" +
-	"\x1cProbeBootstrapTicketResponse\x12\x16\n" +
-	"\x06ticket\x18\x01 \x01(\tR\x06ticket\x129\n" +
-	"\n" +
-	"expires_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"x\n" +
-	"\x16SessionExchangeRequest\x12/\n" +
-	"\rlaunch_ticket\x18\x01 \x01(\tB\n" +
-	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\flaunchTicket\x12-\n" +
-	"\fclient_nonce\x18\x02 \x01(\tB\n" +
-	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\vclientNonce\"A\n" +
+	"\tdevice_id\x18\x02 \x01(\tR\bdeviceId\x12%\n" +
+	"\x0eclient_version\x18\x03 \x01(\tR\rclientVersion\"H\n" +
+	"\x0eLaunchEnvelope\x126\n" +
+	"\acontext\x18\x01 \x01(\v2\x1c.cineko.client.LaunchContextR\acontext\"A\n" +
 	"\x0eSeatMapRequest\x12/\n" +
 	"\rauditorium_id\x18\x01 \x01(\tB\n" +
 	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\fauditoriumId\"R\n" +
 	"\x12AuditoriumResponse\x12<\n" +
 	"\vauditoriums\x18\x01 \x03(\v2\x1a.cineko.catalog.AuditoriumR\vauditoriumsB@Z>github.com/cineko-org/contracts/v3/gen/go/cineko/client;clientb\beditionsp\xe9\a"
 
-var file_cineko_client_client_proto_msgTypes = make([]protoimpl.MessageInfo, 70)
+var file_cineko_client_client_proto_msgTypes = make([]protoimpl.MessageInfo, 61)
 var file_cineko_client_client_proto_goTypes = []any{
 	(*User)(nil),                              // 0: cineko.client.User
 	(*Device)(nil),                            // 1: cineko.client.Device
@@ -10252,42 +8874,30 @@ var file_cineko_client_client_proto_goTypes = []any{
 	(*StreamControl)(nil),                     // 54: cineko.client.StreamControl
 	(*LaunchContext)(nil),                     // 55: cineko.client.LaunchContext
 	(*LaunchEnvelope)(nil),                    // 56: cineko.client.LaunchEnvelope
-	(*PinExchangeRequest)(nil),                // 57: cineko.client.PinExchangeRequest
-	(*TokenExchangeRequest)(nil),              // 58: cineko.client.TokenExchangeRequest
-	(*TokenRefreshRequest)(nil),               // 59: cineko.client.TokenRefreshRequest
-	(*AuthenticationResponse)(nil),            // 60: cineko.client.AuthenticationResponse
-	(*LaunchTicketRequest)(nil),               // 61: cineko.client.LaunchTicketRequest
-	(*LaunchTicketResponse)(nil),              // 62: cineko.client.LaunchTicketResponse
-	(*ProbeBootstrapTicketRequest)(nil),       // 63: cineko.client.ProbeBootstrapTicketRequest
-	(*ProbeBootstrapTicketResponse)(nil),      // 64: cineko.client.ProbeBootstrapTicketResponse
-	(*SessionExchangeRequest)(nil),            // 65: cineko.client.SessionExchangeRequest
-	(*SeatMapRequest)(nil),                    // 66: cineko.client.SeatMapRequest
-	(*AuditoriumResponse)(nil),                // 67: cineko.client.AuditoriumResponse
-	nil,                                       // 68: cineko.client.Bootstrap.RevisionsEntry
-	nil,                                       // 69: cineko.client.Bootstrap.FeaturesEntry
-	(*timestamppb.Timestamp)(nil),             // 70: google.protobuf.Timestamp
-	(*common.LocalDate)(nil),                  // 71: cineko.common.LocalDate
-	(*common.LocalTime)(nil),                  // 72: cineko.common.LocalTime
-	(*catalog.Showtime)(nil),                  // 73: cineko.catalog.Showtime
-	(*common.ResourceIdentity)(nil),           // 74: cineko.common.ResourceIdentity
-	(*observation.Capability)(nil),            // 75: cineko.observation.Capability
-	(*common.Runtime)(nil),                    // 76: cineko.common.Runtime
-	(*catalog.Auditorium)(nil),                // 77: cineko.catalog.Auditorium
+	(*SeatMapRequest)(nil),                    // 57: cineko.client.SeatMapRequest
+	(*AuditoriumResponse)(nil),                // 58: cineko.client.AuditoriumResponse
+	nil,                                       // 59: cineko.client.Bootstrap.RevisionsEntry
+	nil,                                       // 60: cineko.client.Bootstrap.FeaturesEntry
+	(*timestamppb.Timestamp)(nil),             // 61: google.protobuf.Timestamp
+	(*common.LocalTime)(nil),                  // 62: cineko.common.LocalTime
+	(*catalog.Showtime)(nil),                  // 63: cineko.catalog.Showtime
+	(*common.ResourceIdentity)(nil),           // 64: cineko.common.ResourceIdentity
+	(*catalog.Auditorium)(nil),                // 65: cineko.catalog.Auditorium
 }
 var file_cineko_client_client_proto_depIdxs = []int32{
-	70, // 0: cineko.client.User.created_at:type_name -> google.protobuf.Timestamp
-	70, // 1: cineko.client.User.updated_at:type_name -> google.protobuf.Timestamp
-	70, // 2: cineko.client.Device.last_seen_at:type_name -> google.protobuf.Timestamp
-	70, // 3: cineko.client.Device.created_at:type_name -> google.protobuf.Timestamp
-	70, // 4: cineko.client.Device.updated_at:type_name -> google.protobuf.Timestamp
+	61, // 0: cineko.client.User.created_at:type_name -> google.protobuf.Timestamp
+	61, // 1: cineko.client.User.updated_at:type_name -> google.protobuf.Timestamp
+	61, // 2: cineko.client.Device.last_seen_at:type_name -> google.protobuf.Timestamp
+	61, // 3: cineko.client.Device.created_at:type_name -> google.protobuf.Timestamp
+	61, // 4: cineko.client.Device.updated_at:type_name -> google.protobuf.Timestamp
 	2,  // 5: cineko.client.NetworkSettings.direct:type_name -> cineko.client.DirectNetwork
 	3,  // 6: cineko.client.NetworkSettings.proxy:type_name -> cineko.client.ProxyNetwork
 	4,  // 7: cineko.client.Settings.network:type_name -> cineko.client.NetworkSettings
 	5,  // 8: cineko.client.Settings.webhooks:type_name -> cineko.client.WebhookTarget
 	7,  // 9: cineko.client.SeatPreference.preferred_zones:type_name -> cineko.client.SeatZone
 	8,  // 10: cineko.client.Preset.seat_preference:type_name -> cineko.client.SeatPreference
-	70, // 11: cineko.client.Preset.created_at:type_name -> google.protobuf.Timestamp
-	70, // 12: cineko.client.Preset.updated_at:type_name -> google.protobuf.Timestamp
+	61, // 11: cineko.client.Preset.created_at:type_name -> google.protobuf.Timestamp
+	61, // 12: cineko.client.Preset.updated_at:type_name -> google.protobuf.Timestamp
 	10, // 13: cineko.client.MonitorState.pending:type_name -> cineko.client.MonitorPending
 	11, // 14: cineko.client.MonitorState.running:type_name -> cineko.client.MonitorRunning
 	12, // 15: cineko.client.MonitorState.triggered:type_name -> cineko.client.MonitorTriggered
@@ -10295,83 +8905,73 @@ var file_cineko_client_client_proto_depIdxs = []int32{
 	15, // 17: cineko.client.MonitorState.failed:type_name -> cineko.client.MonitorFailed
 	16, // 18: cineko.client.MonitorState.stopped:type_name -> cineko.client.MonitorStopped
 	13, // 19: cineko.client.MonitorState.payment_unknown:type_name -> cineko.client.MonitorPaymentUnknown
-	71, // 20: cineko.client.Monitor.target_dates:type_name -> cineko.common.LocalDate
-	72, // 21: cineko.client.Monitor.earliest_time:type_name -> cineko.common.LocalTime
-	72, // 22: cineko.client.Monitor.latest_time:type_name -> cineko.common.LocalTime
-	17, // 23: cineko.client.Monitor.state:type_name -> cineko.client.MonitorState
-	70, // 24: cineko.client.Monitor.last_checked_at:type_name -> google.protobuf.Timestamp
-	70, // 25: cineko.client.Monitor.created_at:type_name -> google.protobuf.Timestamp
-	70, // 26: cineko.client.Monitor.updated_at:type_name -> google.protobuf.Timestamp
-	70, // 27: cineko.client.Reservation.booked_at:type_name -> google.protobuf.Timestamp
-	70, // 28: cineko.client.Reservation.cancelled_at:type_name -> google.protobuf.Timestamp
-	20, // 29: cineko.client.Reservation.prepared:type_name -> cineko.client.ReservationPrepared
-	21, // 30: cineko.client.Reservation.booked:type_name -> cineko.client.ReservationBooked
-	22, // 31: cineko.client.Reservation.cancellation_committing:type_name -> cineko.client.ReservationCancellationCommitting
-	23, // 32: cineko.client.Reservation.cancellation_unknown:type_name -> cineko.client.ReservationCancellationUnknown
-	24, // 33: cineko.client.Reservation.cancelled:type_name -> cineko.client.ReservationCancelled
-	73, // 34: cineko.client.Reservation.showtime:type_name -> cineko.catalog.Showtime
-	70, // 35: cineko.client.ExternalOperation.created_at:type_name -> google.protobuf.Timestamp
-	70, // 36: cineko.client.ExternalOperation.updated_at:type_name -> google.protobuf.Timestamp
-	26, // 37: cineko.client.ExternalOperation.cancellation:type_name -> cineko.client.CancellationOperation
-	27, // 38: cineko.client.ExternalOperation.prepared:type_name -> cineko.client.OperationPrepared
-	28, // 39: cineko.client.ExternalOperation.unknown:type_name -> cineko.client.OperationUnknown
-	29, // 40: cineko.client.ExternalOperation.attention_required:type_name -> cineko.client.OperationAttentionRequired
-	30, // 41: cineko.client.ExternalOperation.confirmed:type_name -> cineko.client.OperationConfirmed
-	31, // 42: cineko.client.ExternalOperation.reconciled:type_name -> cineko.client.OperationReconciled
-	70, // 43: cineko.client.AppEvent.created_at:type_name -> google.protobuf.Timestamp
-	70, // 44: cineko.client.AppEvent.read_at:type_name -> google.protobuf.Timestamp
-	33, // 45: cineko.client.AppEvent.info:type_name -> cineko.client.EventInfo
-	34, // 46: cineko.client.AppEvent.success:type_name -> cineko.client.EventSuccess
-	35, // 47: cineko.client.AppEvent.warning:type_name -> cineko.client.EventWarning
-	36, // 48: cineko.client.AppEvent.error:type_name -> cineko.client.EventError
-	74, // 49: cineko.client.Resource.identity:type_name -> cineko.common.ResourceIdentity
-	6,  // 50: cineko.client.Resource.settings:type_name -> cineko.client.Settings
-	9,  // 51: cineko.client.Resource.preset:type_name -> cineko.client.Preset
-	18, // 52: cineko.client.Resource.monitor:type_name -> cineko.client.Monitor
-	19, // 53: cineko.client.Resource.reservation:type_name -> cineko.client.Reservation
-	25, // 54: cineko.client.Resource.external_operation:type_name -> cineko.client.ExternalOperation
-	32, // 55: cineko.client.Resource.app_event:type_name -> cineko.client.AppEvent
-	38, // 56: cineko.client.ResourceKind.settings:type_name -> cineko.client.SettingsResource
-	39, // 57: cineko.client.ResourceKind.preset:type_name -> cineko.client.PresetResource
-	40, // 58: cineko.client.ResourceKind.monitor:type_name -> cineko.client.MonitorResource
-	41, // 59: cineko.client.ResourceKind.reservation:type_name -> cineko.client.ReservationResource
-	42, // 60: cineko.client.ResourceKind.external_operation:type_name -> cineko.client.ExternalOperationResource
-	43, // 61: cineko.client.ResourceKind.app_event:type_name -> cineko.client.AppEventResource
-	0,  // 62: cineko.client.Bootstrap.user:type_name -> cineko.client.User
-	68, // 63: cineko.client.Bootstrap.revisions:type_name -> cineko.client.Bootstrap.RevisionsEntry
-	69, // 64: cineko.client.Bootstrap.features:type_name -> cineko.client.Bootstrap.FeaturesEntry
-	1,  // 65: cineko.client.Bootstrap.device:type_name -> cineko.client.Device
-	6,  // 66: cineko.client.EventResource.settings:type_name -> cineko.client.Settings
-	9,  // 67: cineko.client.EventResource.preset:type_name -> cineko.client.Preset
-	18, // 68: cineko.client.EventResource.monitor:type_name -> cineko.client.Monitor
-	19, // 69: cineko.client.EventResource.reservation:type_name -> cineko.client.Reservation
-	25, // 70: cineko.client.EventResource.external_operation:type_name -> cineko.client.ExternalOperation
-	32, // 71: cineko.client.EventResource.app_event:type_name -> cineko.client.AppEvent
-	70, // 72: cineko.client.ClientEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	46, // 73: cineko.client.ClientEvent.upserted:type_name -> cineko.client.EventResource
-	49, // 74: cineko.client.ClientEvent.deleted:type_name -> cineko.client.DeletedResource
-	48, // 75: cineko.client.ClientEvent.execution_ready:type_name -> cineko.client.ExecutionReady
-	44, // 76: cineko.client.DeletedResource.kind:type_name -> cineko.client.ResourceKind
-	50, // 77: cineko.client.StreamControl.ready:type_name -> cineko.client.StreamReady
-	51, // 78: cineko.client.StreamControl.heartbeat:type_name -> cineko.client.StreamHeartbeat
-	52, // 79: cineko.client.StreamControl.retention_gap:type_name -> cineko.client.RetentionGap
-	53, // 80: cineko.client.StreamControl.invalid_cursor:type_name -> cineko.client.InvalidCursor
-	55, // 81: cineko.client.LaunchEnvelope.context:type_name -> cineko.client.LaunchContext
-	70, // 82: cineko.client.AuthenticationResponse.expires_at:type_name -> google.protobuf.Timestamp
-	70, // 83: cineko.client.AuthenticationResponse.refresh_expires_at:type_name -> google.protobuf.Timestamp
-	0,  // 84: cineko.client.AuthenticationResponse.user:type_name -> cineko.client.User
-	55, // 85: cineko.client.AuthenticationResponse.launch:type_name -> cineko.client.LaunchContext
-	55, // 86: cineko.client.LaunchTicketRequest.context:type_name -> cineko.client.LaunchContext
-	70, // 87: cineko.client.LaunchTicketResponse.expires_at:type_name -> google.protobuf.Timestamp
-	75, // 88: cineko.client.ProbeBootstrapTicketRequest.capabilities:type_name -> cineko.observation.Capability
-	76, // 89: cineko.client.ProbeBootstrapTicketRequest.runtime:type_name -> cineko.common.Runtime
-	70, // 90: cineko.client.ProbeBootstrapTicketResponse.expires_at:type_name -> google.protobuf.Timestamp
-	77, // 91: cineko.client.AuditoriumResponse.auditoriums:type_name -> cineko.catalog.Auditorium
-	92, // [92:92] is the sub-list for method output_type
-	92, // [92:92] is the sub-list for method input_type
-	92, // [92:92] is the sub-list for extension type_name
-	92, // [92:92] is the sub-list for extension extendee
-	0,  // [0:92] is the sub-list for field type_name
+	62, // 20: cineko.client.Monitor.earliest_time:type_name -> cineko.common.LocalTime
+	62, // 21: cineko.client.Monitor.latest_time:type_name -> cineko.common.LocalTime
+	17, // 22: cineko.client.Monitor.state:type_name -> cineko.client.MonitorState
+	61, // 23: cineko.client.Monitor.last_checked_at:type_name -> google.protobuf.Timestamp
+	61, // 24: cineko.client.Monitor.created_at:type_name -> google.protobuf.Timestamp
+	61, // 25: cineko.client.Monitor.updated_at:type_name -> google.protobuf.Timestamp
+	61, // 26: cineko.client.Reservation.booked_at:type_name -> google.protobuf.Timestamp
+	61, // 27: cineko.client.Reservation.cancelled_at:type_name -> google.protobuf.Timestamp
+	20, // 28: cineko.client.Reservation.prepared:type_name -> cineko.client.ReservationPrepared
+	21, // 29: cineko.client.Reservation.booked:type_name -> cineko.client.ReservationBooked
+	22, // 30: cineko.client.Reservation.cancellation_committing:type_name -> cineko.client.ReservationCancellationCommitting
+	23, // 31: cineko.client.Reservation.cancellation_unknown:type_name -> cineko.client.ReservationCancellationUnknown
+	24, // 32: cineko.client.Reservation.cancelled:type_name -> cineko.client.ReservationCancelled
+	63, // 33: cineko.client.Reservation.showtime:type_name -> cineko.catalog.Showtime
+	61, // 34: cineko.client.ExternalOperation.created_at:type_name -> google.protobuf.Timestamp
+	61, // 35: cineko.client.ExternalOperation.updated_at:type_name -> google.protobuf.Timestamp
+	26, // 36: cineko.client.ExternalOperation.cancellation:type_name -> cineko.client.CancellationOperation
+	27, // 37: cineko.client.ExternalOperation.prepared:type_name -> cineko.client.OperationPrepared
+	28, // 38: cineko.client.ExternalOperation.unknown:type_name -> cineko.client.OperationUnknown
+	29, // 39: cineko.client.ExternalOperation.attention_required:type_name -> cineko.client.OperationAttentionRequired
+	30, // 40: cineko.client.ExternalOperation.confirmed:type_name -> cineko.client.OperationConfirmed
+	31, // 41: cineko.client.ExternalOperation.reconciled:type_name -> cineko.client.OperationReconciled
+	61, // 42: cineko.client.AppEvent.created_at:type_name -> google.protobuf.Timestamp
+	61, // 43: cineko.client.AppEvent.read_at:type_name -> google.protobuf.Timestamp
+	33, // 44: cineko.client.AppEvent.info:type_name -> cineko.client.EventInfo
+	34, // 45: cineko.client.AppEvent.success:type_name -> cineko.client.EventSuccess
+	35, // 46: cineko.client.AppEvent.warning:type_name -> cineko.client.EventWarning
+	36, // 47: cineko.client.AppEvent.error:type_name -> cineko.client.EventError
+	64, // 48: cineko.client.Resource.identity:type_name -> cineko.common.ResourceIdentity
+	6,  // 49: cineko.client.Resource.settings:type_name -> cineko.client.Settings
+	9,  // 50: cineko.client.Resource.preset:type_name -> cineko.client.Preset
+	18, // 51: cineko.client.Resource.monitor:type_name -> cineko.client.Monitor
+	19, // 52: cineko.client.Resource.reservation:type_name -> cineko.client.Reservation
+	25, // 53: cineko.client.Resource.external_operation:type_name -> cineko.client.ExternalOperation
+	32, // 54: cineko.client.Resource.app_event:type_name -> cineko.client.AppEvent
+	38, // 55: cineko.client.ResourceKind.settings:type_name -> cineko.client.SettingsResource
+	39, // 56: cineko.client.ResourceKind.preset:type_name -> cineko.client.PresetResource
+	40, // 57: cineko.client.ResourceKind.monitor:type_name -> cineko.client.MonitorResource
+	41, // 58: cineko.client.ResourceKind.reservation:type_name -> cineko.client.ReservationResource
+	42, // 59: cineko.client.ResourceKind.external_operation:type_name -> cineko.client.ExternalOperationResource
+	43, // 60: cineko.client.ResourceKind.app_event:type_name -> cineko.client.AppEventResource
+	0,  // 61: cineko.client.Bootstrap.user:type_name -> cineko.client.User
+	59, // 62: cineko.client.Bootstrap.revisions:type_name -> cineko.client.Bootstrap.RevisionsEntry
+	60, // 63: cineko.client.Bootstrap.features:type_name -> cineko.client.Bootstrap.FeaturesEntry
+	1,  // 64: cineko.client.Bootstrap.device:type_name -> cineko.client.Device
+	6,  // 65: cineko.client.EventResource.settings:type_name -> cineko.client.Settings
+	9,  // 66: cineko.client.EventResource.preset:type_name -> cineko.client.Preset
+	18, // 67: cineko.client.EventResource.monitor:type_name -> cineko.client.Monitor
+	19, // 68: cineko.client.EventResource.reservation:type_name -> cineko.client.Reservation
+	25, // 69: cineko.client.EventResource.external_operation:type_name -> cineko.client.ExternalOperation
+	32, // 70: cineko.client.EventResource.app_event:type_name -> cineko.client.AppEvent
+	61, // 71: cineko.client.ClientEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	46, // 72: cineko.client.ClientEvent.upserted:type_name -> cineko.client.EventResource
+	49, // 73: cineko.client.ClientEvent.deleted:type_name -> cineko.client.DeletedResource
+	48, // 74: cineko.client.ClientEvent.execution_ready:type_name -> cineko.client.ExecutionReady
+	44, // 75: cineko.client.DeletedResource.kind:type_name -> cineko.client.ResourceKind
+	50, // 76: cineko.client.StreamControl.ready:type_name -> cineko.client.StreamReady
+	51, // 77: cineko.client.StreamControl.heartbeat:type_name -> cineko.client.StreamHeartbeat
+	52, // 78: cineko.client.StreamControl.retention_gap:type_name -> cineko.client.RetentionGap
+	53, // 79: cineko.client.StreamControl.invalid_cursor:type_name -> cineko.client.InvalidCursor
+	55, // 80: cineko.client.LaunchEnvelope.context:type_name -> cineko.client.LaunchContext
+	65, // 81: cineko.client.AuditoriumResponse.auditoriums:type_name -> cineko.catalog.Auditorium
+	82, // [82:82] is the sub-list for method output_type
+	82, // [82:82] is the sub-list for method input_type
+	82, // [82:82] is the sub-list for extension type_name
+	82, // [82:82] is the sub-list for extension extendee
+	0,  // [0:82] is the sub-list for field type_name
 }
 
 func init() { file_cineko_client_client_proto_init() }
@@ -10454,7 +9054,7 @@ func file_cineko_client_client_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_cineko_client_client_proto_rawDesc), len(file_cineko_client_client_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   70,
+			NumMessages:   61,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

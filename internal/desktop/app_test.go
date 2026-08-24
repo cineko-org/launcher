@@ -1,24 +1,26 @@
 package desktop
 
 import (
+	"bytes"
+	"context"
 	"errors"
+	"log/slog"
+	"net/http"
+	"net/url"
+	"strings"
 	"testing"
+	"time"
 
 	releasepb "github.com/cineko-org/contracts/v3/gen/go/cineko/release"
-	centralstore "github.com/cineko-org/launcher/internal/centralclient"
 	"github.com/cineko-org/launcher/internal/launcher"
+	"github.com/cineko-org/launcher/internal/telemetry"
 )
 
-func TestLauncherInitialStateAndPINValidation(t *testing.T) {
+func TestLauncherInitialState(t *testing.T) {
 	app := New(launcher.Config{Version: "1.2.3"}, nil)
 	state := app.State()
 	if state.Mode != ModeChecking || state.Version != "1.2.3" || state.Revision != 1 {
 		t.Fatalf("initial state = %+v", state)
-	}
-	for _, pin := range []string{"", "12345", "12345a", "１２３４５６"} {
-		if err := app.Connect(pin); !errors.Is(err, launcher.ErrInvalidPIN) {
-			t.Fatalf("Connect(%q) error = %v", pin, err)
-		}
 	}
 }
 
@@ -35,40 +37,22 @@ func TestLauncherStateRevisionIsMonotonic(t *testing.T) {
 	}
 }
 
-func TestLauncherPublishesTypedAuthenticationFailures(t *testing.T) {
-	app := New(launcher.Config{Version: "1.2.3"}, nil)
-	config := launcher.Config{Version: "1.2.3"}
-	app.publishFailure(config, centralstore.ErrPINInvalid)
-	if state := app.State(); state.Mode != ModeLogin || state.Message != "인증 번호가 올바르지 않습니다." {
-		t.Fatalf("invalid PIN state = %+v", state)
-	}
-	app.publishFailure(config, centralstore.ErrServerUnavailable)
-	if state := app.State(); state.Mode != ModeError || state.Message != "서버 응답이 없습니다. 잠시 후 다시 시도하세요." {
-		t.Fatalf("server unavailable state = %+v", state)
-	}
-}
-
 func TestLauncherPublishesPortableUpdate(t *testing.T) {
 	app := New(launcher.Config{Version: "1.2.3"}, nil)
-	artifact := &releasepb.Artifact{}
-	artifact.SetUrl("https://cdn.example/launcher.zip")
+	artifact := releasepb.Artifact_builder{Url: stringPointer("https://releases.example/launcher.zip")}.Build()
 	app.publishFailure(launcher.Config{Version: "1.2.3"}, &launcher.LauncherUpdateRequired{
 		Version: "1.3.0", Artifact: artifact,
 	})
 	state := app.State()
 	if state.Mode != ModeLauncherUpdate || state.LatestVersion != "1.3.0" ||
-		state.DownloadURL != "https://cdn.example/launcher.zip" ||
-		state.Message != "계속하려면 새 Launcher를 내려받아 실행하세요." {
+		state.DownloadURL != "https://releases.example/launcher.zip" {
 		t.Fatalf("Launcher update state = %+v", state)
 	}
 }
 
 func TestLauncherProgressMapsToDesktopState(t *testing.T) {
 	app := New(launcher.Config{Version: "1.2.3"}, nil)
-	app.progress(launcher.Progress{
-		Stage: launcher.StageDownloading, Message: "다운로드 중", Artifact: "client",
-		Downloaded: 50, Total: 100,
-	})
+	app.progress(launcher.Progress{Stage: launcher.StageDownloading, Message: "다운로드 중", Artifact: "client", Downloaded: 50, Total: 100})
 	state := app.State()
 	if state.Mode != ModeUpdating || state.Artifact != "client" || state.Downloaded != 50 || state.Total != 100 {
 		t.Fatalf("download state = %+v", state)
@@ -80,17 +64,25 @@ func TestLauncherProgressMapsToDesktopState(t *testing.T) {
 }
 
 func TestUserFacingErrorDoesNotExposeInternalDetail(t *testing.T) {
-	internal := `Post "https://central.internal/v1/auth/pin": dial tcp: lookup central.internal: no such host`
-	message := userFacingError(errors.New(internal))
-	if message != "Cineko 서비스에 연결할 수 없습니다. 네트워크 연결을 확인한 뒤 다시 시도하세요." {
+	message := userFacingError(errors.New(`Get "https://releases.internal/runtime.json": dial tcp: no such host`))
+	if message != "업데이트 서버에 연결할 수 없습니다. 네트워크 연결을 확인한 뒤 다시 시도하세요." {
 		t.Fatalf("connection message = %q", message)
 	}
 	message = userFacingError(errors.New("verify client artifact: SHA-256 mismatch"))
 	if message != "업데이트 파일을 받지 못했습니다. 네트워크 연결을 확인한 뒤 다시 시도하세요." {
 		t.Fatalf("artifact message = %q", message)
 	}
-	message = userFacingError(errors.New("unexpected internal detail"))
-	if message != "Cineko를 시작할 수 없습니다. 잠시 후 다시 시도해 주세요." {
-		t.Fatalf("generic message = %q", message)
+}
+
+func TestDownloadLauncherContextUsesAppLogger(t *testing.T) {
+	var output bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&output, nil))
+	app := New(launcher.Config{Version: "1.2.3", Logger: logger}, nil)
+	request := &http.Request{Method: http.MethodGet, Header: make(http.Header), URL: &url.URL{Path: "/launcher.zip"}}
+	telemetry.LogHTTPClientRequest(app.requestContext(context.Background(), app.config), request, &http.Response{StatusCode: http.StatusOK}, time.Now(), 0, 0, nil)
+	if !strings.Contains(output.String(), `"event":"http.client.request.completed"`) || !strings.Contains(output.String(), `"service":"launcher"`) {
+		t.Fatalf("DownloadLauncher context did not use app logger: %s", output.String())
 	}
 }
+
+func stringPointer(value string) *string { return &value }

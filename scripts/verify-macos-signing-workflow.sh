@@ -59,8 +59,7 @@ final_zip_line="$(grep -n "ditto -c -k --sequesterRsrc --keepParent \"\$app_path
 draft_guard_line="$(grep -n 'Require an unpublished draft release' "$workflow" | head -n 1 | cut -d: -f1)"
 upload_line="$(grep -n 'Attach portable Launchers' "$workflow" | head -n 1 | cut -d: -f1)"
 publish_line="$(grep -n 'Publish the complete portable release' "$workflow" | head -n 1 | cut -d: -f1)"
-register_line="$(grep -n 'Register the stable Launcher set' "$workflow" | head -n 1 | cut -d: -f1)"
-[[ -n "$draft_guard_line" && -n "$upload_line" && -n "$publish_line" && -n "$register_line" ]] || \
+[[ -n "$draft_guard_line" && -n "$upload_line" && -n "$publish_line" ]] || \
   fail 'draft publication order cannot be verified'
-((draft_guard_line < upload_line && upload_line < publish_line && publish_line < register_line)) || \
+((draft_guard_line < upload_line && upload_line < publish_line)) || \
   fail 'release must remain draft until all portable artifacts are attached'

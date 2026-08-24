@@ -22,18 +22,15 @@ github.com/antlr4-go/antlr/v4
 # github.com/bep/debounce v1.2.1
 ## explicit
 github.com/bep/debounce
-# github.com/cineko-org/contracts/v3 v3.6.1
-## explicit; go 1.26
+# github.com/cineko-org/contracts/v3 v3.7.0
+## explicit; go 1.27
 github.com/cineko-org/contracts/v3/gen/go/cineko/catalog
 github.com/cineko-org/contracts/v3/gen/go/cineko/client
 github.com/cineko-org/contracts/v3/gen/go/cineko/collection
 github.com/cineko-org/contracts/v3/gen/go/cineko/common
-github.com/cineko-org/contracts/v3/gen/go/cineko/execution
 github.com/cineko-org/contracts/v3/gen/go/cineko/observation
-github.com/cineko-org/contracts/v3/gen/go/cineko/probe
 github.com/cineko-org/contracts/v3/gen/go/cineko/release
 github.com/cineko-org/contracts/v3/gen/go/cineko/seatmap
-github.com/cineko-org/contracts/v3/gen/go/cineko/service
 # github.com/go-ole/go-ole v1.3.0
 ## explicit; go 1.12
 github.com/go-ole/go-ole

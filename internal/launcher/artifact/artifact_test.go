@@ -31,8 +31,11 @@ func TestDownloadResumesAndReusesVerifiedCache(t *testing.T) {
 	var transferred atomic.Int64
 	server := httptest.NewTLSServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		requests.Add(1)
+		if request.Header.Get("X-Request-Id") == "" {
+			t.Error("artifact request is missing X-Request-Id")
+		}
 		if request.Header.Get("Authorization") != "" {
-			t.Error("public CDN request included Central credentials")
+			t.Error("public CDN request included private credentials")
 		}
 		if got := request.Header.Get("Range"); got != fmt.Sprintf("bytes=%d-", offset) {
 			t.Errorf("Range=%q", got)

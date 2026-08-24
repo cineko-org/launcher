@@ -2,19 +2,14 @@ package launcher
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
-	"sort"
-	"strings"
 
 	releasepb "github.com/cineko-org/contracts/v3/gen/go/cineko/release"
-	bootstrap "github.com/cineko-org/launcher/internal/keys"
 	"github.com/cineko-org/launcher/internal/launcher/artifact"
 	"github.com/cineko-org/launcher/internal/launcher/managedfiles"
 	installedruntime "github.com/cineko-org/launcher/internal/launcher/runtime"
@@ -51,13 +46,6 @@ func installRelease(
 	installed := installedRelease{
 		Release: release, ClientPath: paths["client"], BrowserPath: paths["browser"],
 		DriverPath: paths["playwright"],
-	}
-	installed.ProbePublicKeyHash, installed.ProbePublicKeySpec, err = installProbePublicKeys(
-		filepath.Join(config.DataDir, "components", "keyring"),
-		release.GetClient().GetProbeBootstrapPublicKeys(),
-	)
-	if err != nil {
-		return installedRelease{}, err
 	}
 	if previousErr == nil && !sameRuntimeRelease(previous.Release, installed.Release) {
 		if err := managedfiles.WriteJSONAtomic(previousPath, previous); err != nil {
@@ -137,12 +125,10 @@ func (installed installedRelease) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	return json.Marshal(map[string]any{
-		"release":            json.RawMessage(release),
-		"clientPath":         installed.ClientPath,
-		"browserPath":        installed.BrowserPath,
-		"driverPath":         installed.DriverPath,
-		"probePublicKeyHash": installed.ProbePublicKeyHash,
-		"probePublicKeySpec": installed.ProbePublicKeySpec,
+		"release":     json.RawMessage(release),
+		"clientPath":  installed.ClientPath,
+		"browserPath": installed.BrowserPath,
+		"driverPath":  installed.DriverPath,
 	})
 }
 
@@ -153,7 +139,9 @@ func (installed *installedRelease) UnmarshalJSON(contents []byte) error {
 	}
 	for key := range fields {
 		switch key {
-		case "release", "clientPath", "browserPath", "driverPath", "probePublicKeyHash", "probePublicKeySpec":
+		case "release", "clientPath", "browserPath", "driverPath":
+		case "probePublicKeyHash", "probePublicKeySpec":
+			// Ignored while reading an older installed manifest.
 		default:
 			return fmt.Errorf("unknown installed runtime manifest field %q", key)
 		}
@@ -189,21 +177,8 @@ func (installed *installedRelease) UnmarshalJSON(contents []byte) error {
 	if err != nil {
 		return err
 	}
-	probePublicKeyHash, err := decodeString("probePublicKeyHash")
-	if err != nil {
-		return err
-	}
-	probePublicKeySpec, err := decodeString("probePublicKeySpec")
-	if err != nil {
-		return err
-	}
 	*installed = installedRelease{
-		Release:            release,
-		ClientPath:         clientPath,
-		BrowserPath:        browserPath,
-		DriverPath:         driverPath,
-		ProbePublicKeyHash: probePublicKeyHash,
-		ProbePublicKeySpec: probePublicKeySpec,
+		Release: release, ClientPath: clientPath, BrowserPath: browserPath, DriverPath: driverPath,
 	}
 	return nil
 }
@@ -235,12 +210,6 @@ func loadInstalledManifest(dataDir string, manifestPath string) (installedReleas
 	if err := validateInstalledExecutables(dataDir, installed); err != nil {
 		return installedRelease{}, err
 	}
-	if err := validateInstalledPublicKeys(
-		dataDir, installed.ProbePublicKeyHash, installed.ProbePublicKeySpec,
-		installed.Release.GetClient().GetProbeBootstrapPublicKeys(),
-	); err != nil {
-		return installedRelease{}, err
-	}
 	return installed, nil
 }
 
@@ -253,20 +222,7 @@ func sameRuntimeRelease(left *releasepb.RuntimeRelease, right *releasepb.Runtime
 		left.GetBrowser().GetRevision() == right.GetBrowser().GetRevision() &&
 		left.GetBrowser().GetArtifact().GetSha256() == right.GetBrowser().GetArtifact().GetSha256() &&
 		left.GetPlaywright().GetVersion() == right.GetPlaywright().GetVersion() &&
-		left.GetPlaywright().GetArtifact().GetSha256() == right.GetPlaywright().GetArtifact().GetSha256() &&
-		mapsEqual(left.GetClient().GetProbeBootstrapPublicKeys(), right.GetClient().GetProbeBootstrapPublicKeys())
-}
-
-func mapsEqual(left, right map[string]string) bool {
-	if len(left) != len(right) {
-		return false
-	}
-	for key, value := range left {
-		if right[key] != value {
-			return false
-		}
-	}
-	return true
+		left.GetPlaywright().GetArtifact().GetSha256() == right.GetPlaywright().GetArtifact().GetSha256()
 }
 
 func rollbackInstalledRelease(dataDir string, installed installedRelease) error {
@@ -274,14 +230,6 @@ func rollbackInstalledRelease(dataDir string, installed installedRelease) error 
 		return nil
 	}
 	if err := validateInstalledExecutables(dataDir, *installed.Previous); err != nil {
-		return err
-	}
-	if err := validateInstalledPublicKeys(
-		dataDir,
-		installed.Previous.ProbePublicKeyHash,
-		installed.Previous.ProbePublicKeySpec,
-		installed.Previous.Release.GetClient().GetProbeBootstrapPublicKeys(),
-	); err != nil {
 		return err
 	}
 	if err := managedfiles.WriteJSONAtomic(filepath.Join(dataDir, "runtime", "installed.json"), installed.Previous); err != nil {
@@ -296,7 +244,7 @@ func finalizeInstalledRelease(dataDir string, installed installedRelease) {
 	}
 	installedruntime.Cleanup(dataDir, map[string]string{
 		"client": installed.Release.GetClient().GetArtifact().GetSha256(), "browser": installed.Release.GetBrowser().GetArtifact().GetSha256(),
-		"playwright": installed.Release.GetPlaywright().GetArtifact().GetSha256(), "keyring": installed.ProbePublicKeyHash,
+		"playwright": installed.Release.GetPlaywright().GetArtifact().GetSha256(),
 	})
 }
 
@@ -322,122 +270,4 @@ func validateInstalledExecutables(dataDir string, installed installedRelease) er
 		}
 	}
 	return nil
-}
-
-func validateInstalledPublicKeys(
-	dataDir string,
-	digest string,
-	spec string,
-	keyring map[string]string,
-) error {
-	expectedDigest, keyIDs, err := validateProbePublicKeySet(keyring)
-	if err != nil || !strings.EqualFold(digest, expectedDigest) {
-		return errors.New("installed Probe public-key digest is invalid")
-	}
-	directory := filepath.Join(dataDir, "components", "keyring", expectedDigest)
-	if err := managedfiles.ValidateDirectory(filepath.Join(dataDir, "components", "keyring"), directory); err != nil {
-		return err
-	}
-	expectedEntries := make([]string, 0, len(keyIDs))
-	for _, keyID := range keyIDs {
-		keyPath := filepath.Join(directory, keyID+".pem")
-		expectedEntries = append(expectedEntries, keyID+"="+keyPath)
-		info, err := os.Lstat(keyPath)
-		if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-			return fmt.Errorf("installed Probe public key %q is not a regular file", keyID)
-		}
-		contents, err := os.ReadFile(keyPath) // #nosec G304 -- content-addressed keyring path.
-		if err != nil || string(contents) != keyring[keyID] {
-			return fmt.Errorf("installed Probe public key %q is invalid", keyID)
-		}
-	}
-	entries, err := os.ReadDir(directory)
-	if err != nil || len(entries) != len(keyIDs) || spec != strings.Join(expectedEntries, ",") {
-		return errors.New("installed Probe public-key set is invalid")
-	}
-	return nil
-}
-
-func installProbePublicKeys(root string, keyring map[string]string) (string, string, error) {
-	digest, keyIDs, err := validateProbePublicKeySet(keyring)
-	if err != nil {
-		return "", "", err
-	}
-	if err := os.MkdirAll(root, 0o700); err != nil {
-		return "", "", fmt.Errorf("create Probe public-key root: %w", err)
-	}
-	if err := managedfiles.ValidateDirectory(filepath.Dir(filepath.Dir(root)), root); err != nil {
-		return "", "", err
-	}
-	directory := filepath.Join(root, digest)
-	if _, err := os.Stat(directory); err == nil {
-		spec := probePublicKeySpec(directory, keyIDs)
-		if err := validateInstalledPublicKeys(filepath.Dir(filepath.Dir(root)), digest, spec, keyring); err != nil {
-			return "", "", err
-		}
-		return digest, spec, nil
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return "", "", err
-	}
-	staging, err := os.MkdirTemp(root, ".install-*")
-	if err != nil {
-		return "", "", err
-	}
-	defer func() { _ = os.RemoveAll(staging) }()
-	for _, keyID := range keyIDs {
-		path := filepath.Join(staging, keyID+".pem")
-		if err := os.WriteFile(path, []byte(keyring[keyID]), 0o600); err != nil {
-			return "", "", fmt.Errorf("write Probe public key %q: %w", keyID, err)
-		}
-	}
-	if err := os.Rename(staging, directory); err != nil {
-		return "", "", err
-	}
-	return digest, probePublicKeySpec(directory, keyIDs), nil
-}
-
-func validateProbePublicKeySet(keyring map[string]string) (string, []string, error) {
-	if len(keyring) == 0 || len(keyring) > 16 {
-		return "", nil, errors.New("probe public-key set must contain 1 to 16 keys")
-	}
-	keyIDs := make([]string, 0, len(keyring))
-	for keyID := range keyring {
-		keyIDs = append(keyIDs, keyID)
-	}
-	sort.Strings(keyIDs)
-	hasher := sha256.New()
-	for _, keyID := range keyIDs {
-		if !validProbeKeyID(keyID) {
-			return "", nil, fmt.Errorf("invalid Probe public key ID %q", keyID)
-		}
-		contents := []byte(keyring[keyID])
-		if _, err := bootstrap.ParsePublicKeyPEM(contents); err != nil {
-			return "", nil, fmt.Errorf("validate Probe public key %q: %w", keyID, err)
-		}
-		_, _ = fmt.Fprintf(hasher, "%s\x00%d\x00", keyID, len(contents))
-		_, _ = hasher.Write(contents)
-	}
-	return hex.EncodeToString(hasher.Sum(nil)), keyIDs, nil
-}
-
-func probePublicKeySpec(directory string, keyIDs []string) string {
-	entries := make([]string, 0, len(keyIDs))
-	for _, keyID := range keyIDs {
-		entries = append(entries, keyID+"="+filepath.Join(directory, keyID+".pem"))
-	}
-	return strings.Join(entries, ",")
-}
-
-func validProbeKeyID(value string) bool {
-	if value == "" || len(value) > 64 {
-		return false
-	}
-	for _, character := range value {
-		if character >= 'a' && character <= 'z' || character >= 'A' && character <= 'Z' ||
-			character >= '0' && character <= '9' || character == '-' || character == '_' {
-			continue
-		}
-		return false
-	}
-	return true
 }
