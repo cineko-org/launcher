@@ -16,6 +16,18 @@ run_publisher() {
     scripts/register-launcher-release.sh 1.2.3 2026-08-12T00:00:00Z "$assets"
 }
 
+payload="$test_root/launcher-release-set.json"
+run_publisher >"$payload"
+jq -e '
+  reduce .releases[] as $release ({};
+    .[$release.platform + "-" + $release.architecture] = $release.launcher.url
+  ) == {
+    "darwin-arm64": "https://github.example/releases/download/v1.2.3/darwin-arm64/cineko-launcher-v1.2.3-darwin-arm64.zip",
+    "windows-amd64": "https://github.example/releases/download/v1.2.3/windows-amd64/cineko-launcher-v1.2.3-windows-amd64.exe",
+    "linux-amd64": "https://github.example/releases/download/v1.2.3/linux-amd64/cineko-launcher-v1.2.3-linux-amd64.AppImage"
+  }
+' "$payload" >/dev/null
+
 mv "$assets/cineko-launcher-v1.2.3-windows-amd64.exe" "$assets/missing.exe"
 if run_publisher >/dev/null 2>&1; then
   printf 'publisher accepted an incomplete platform set\n' >&2
