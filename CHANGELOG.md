@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/cineko-org/launcher/compare/v1.4.0...v1.4.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* **release:** publish launcher artifacts on routed paths ([#33](https://github.com/cineko-org/launcher/issues/33)) ([40e83fb](https://github.com/cineko-org/launcher/commit/40e83fbf7085adde01bce63e0ab1b83712bd1281))
+
 ## [1.4.0](https://github.com/cineko-org/launcher/compare/v1.3.3...v1.4.0) (2026-08-24)
 
 
