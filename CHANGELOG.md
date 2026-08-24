@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/cineko-org/launcher/compare/v1.3.3...v1.4.0) (2026-08-24)
+
+
+### Features
+
+* make Launcher own the local Client runtime ([#31](https://github.com/cineko-org/launcher/issues/31)) ([778a4a2](https://github.com/cineko-org/launcher/commit/778a4a24ca0a92dee333e903bb1a5e4ca047da50))
+
 ## [1.3.3](https://github.com/cineko-org/launcher/compare/v1.3.2...v1.3.3) (2026-08-22)
 
 
