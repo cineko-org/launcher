@@ -11,9 +11,9 @@ import (
 	"strings"
 	"sync"
 
-	centralstore "github.com/cineko-org/launcher/internal/centralclient"
 	"github.com/cineko-org/launcher/internal/launcher"
 	launcherartifact "github.com/cineko-org/launcher/internal/launcher/artifact"
+	"github.com/cineko-org/launcher/internal/telemetry"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -21,7 +21,6 @@ type Mode string
 
 const (
 	ModeChecking       Mode = "checking"
-	ModeLogin          Mode = "login"
 	ModeUpdating       Mode = "updating"
 	ModeLauncherUpdate Mode = "launcher-update"
 	ModeLaunching      Mode = "launching"
@@ -52,6 +51,9 @@ type Launcher struct {
 }
 
 func New(config launcher.Config, logger *slog.Logger) *Launcher {
+	if config.Logger == nil {
+		config.Logger = logger
+	}
 	return &Launcher{
 		config: config,
 		state:  State{Revision: 1, Mode: ModeChecking, Message: "Cineko 시작 준비 중", Version: config.Version},
@@ -63,7 +65,7 @@ func (app *Launcher) Startup(ctx context.Context) {
 	app.mu.Lock()
 	app.ctx = ctx
 	app.mu.Unlock()
-	_ = app.start("")
+	_ = app.start()
 }
 
 func (app *Launcher) State() State {
@@ -72,32 +74,7 @@ func (app *Launcher) State() State {
 	return app.state
 }
 
-func (app *Launcher) Connect(pin string) error {
-	pin = strings.TrimSpace(pin)
-	if !validPIN(pin) {
-		return launcher.ErrInvalidPIN
-	}
-	return app.start(pin)
-}
-
-func (app *Launcher) Retry() error { return app.start("") }
-
-func (app *Launcher) Logout() error {
-	app.mu.RLock()
-	running, ctx, config := app.running, app.ctx, app.config
-	app.mu.RUnlock()
-	if running {
-		return errors.New("launcher is busy")
-	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	if err := launcher.Logout(ctx, config); err != nil {
-		return err
-	}
-	app.publish(State{Mode: ModeLogin, Message: "6자리 PIN을 입력하세요", Version: config.Version})
-	return nil
-}
+func (app *Launcher) Retry() error { return app.start() }
 
 func (app *Launcher) Quit() {
 	app.mu.RLock()
@@ -115,6 +92,7 @@ func (app *Launcher) DownloadLauncher() error {
 	if ctx == nil || state.Mode != ModeLauncherUpdate || update == nil || state.DownloadURL == "" {
 		return errors.New("Launcher download is unavailable")
 	}
+	ctx = app.requestContext(ctx, config)
 	parsed, err := url.Parse(update.Artifact.GetUrl())
 	if err != nil {
 		return err
@@ -157,6 +135,14 @@ func (app *Launcher) DownloadLauncher() error {
 	return nil
 }
 
+func (app *Launcher) requestContext(ctx context.Context, config launcher.Config) context.Context {
+	logger := app.logger
+	if logger == nil {
+		logger = config.Logger
+	}
+	return telemetry.WithLogger(ctx, logger)
+}
+
 func (app *Launcher) Show() {
 	app.mu.RLock()
 	ctx := app.ctx
@@ -167,7 +153,7 @@ func (app *Launcher) Show() {
 	}
 }
 
-func (app *Launcher) start(pin string) error {
+func (app *Launcher) start() error {
 	app.mu.Lock()
 	if app.running {
 		app.mu.Unlock()
@@ -179,7 +165,6 @@ func (app *Launcher) start(pin string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	config.PIN = pin
 	config.OnProgress = app.progress
 	config.OnClientStarted = app.clientStarted
 	go app.execute(ctx, config)
@@ -213,14 +198,6 @@ func (app *Launcher) publishFailure(config launcher.Config, err error) {
 			Mode: ModeLauncherUpdate, Message: "계속하려면 새 Launcher를 내려받아 실행하세요.",
 			Version: config.Version, LatestVersion: update.Version, DownloadURL: update.Artifact.GetUrl(),
 		})
-	case errors.Is(err, launcher.ErrAuthenticationRequired):
-		app.publish(State{Mode: ModeLogin, Message: "6자리 PIN을 입력하세요", Version: config.Version})
-	case errors.Is(err, launcher.ErrInvalidPIN), errors.Is(err, centralstore.ErrPINInvalid):
-		app.publish(State{Mode: ModeLogin, Message: "인증 번호가 올바르지 않습니다.", Version: config.Version})
-	case errors.Is(err, centralstore.ErrPINRateLimited):
-		app.publish(State{Mode: ModeLogin, Message: "입력 횟수를 초과했습니다. 10분 후 다시 시도하세요.", Version: config.Version})
-	case errors.Is(err, centralstore.ErrServerUnavailable):
-		app.publish(State{Mode: ModeError, Message: "서버 응답이 없습니다. 잠시 후 다시 시도하세요.", Version: config.Version})
 	default:
 		app.publish(State{Mode: ModeError, Message: userFacingError(err), Version: config.Version})
 	}
@@ -267,25 +244,13 @@ func (app *Launcher) publish(state State) {
 	}
 }
 
-func validPIN(pin string) bool {
-	if len(pin) != 6 {
-		return false
-	}
-	for _, value := range pin {
-		if value < '0' || value > '9' {
-			return false
-		}
-	}
-	return true
-}
-
 func userFacingError(err error) string {
 	message := strings.ToLower(err.Error())
 	switch {
 	case strings.Contains(message, "download"), strings.Contains(message, "artifact"):
 		return "업데이트 파일을 받지 못했습니다. 네트워크 연결을 확인한 뒤 다시 시도하세요."
-	case strings.Contains(message, "central"), strings.Contains(message, "connect"), strings.Contains(message, "dial tcp"):
-		return "Cineko 서비스에 연결할 수 없습니다. 네트워크 연결을 확인한 뒤 다시 시도하세요."
+	case strings.Contains(message, "connect"), strings.Contains(message, "dial tcp"), strings.Contains(message, "release manifest"):
+		return "업데이트 서버에 연결할 수 없습니다. 네트워크 연결을 확인한 뒤 다시 시도하세요."
 	default:
 		return "Cineko를 시작할 수 없습니다. 잠시 후 다시 시도해 주세요."
 	}

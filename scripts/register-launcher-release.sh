@@ -9,8 +9,6 @@ fi
 readonly version="${1#v}"
 readonly published_at="$2"
 readonly assets_dir="$3"
-: "${CINEKO_CENTRAL_URL:?required}"
-: "${CINEKO_RELEASE_PUBLISH_TOKEN:?required}"
 : "${CINEKO_LAUNCHER_RELEASE_BASE:?required}"
 readonly public_base="${CINEKO_LAUNCHER_RELEASE_BASE%/}"
 
@@ -61,6 +59,10 @@ append_release linux amd64 AppImage "cineko-launcher-v${version}-linux-amd64.App
 
 readonly payload="$temporary_root/launcher-release-set.json"
 "$release_contract" set "${release_paths[@]}" >"$payload"
-"$release_contract" publish "$CINEKO_CENTRAL_URL" "$payload"
+if [[ -n "${CINEKO_RELEASE_PAYLOAD_OUT:-}" ]]; then
+  cp "$payload" "$CINEKO_RELEASE_PAYLOAD_OUT"
+else
+  cat "$payload"
+fi
 
-printf 'registered Launcher v%s for all supported platforms\n' "$version"
+printf 'generated Launcher v%s release metadata for all supported platforms\n' "$version" >&2

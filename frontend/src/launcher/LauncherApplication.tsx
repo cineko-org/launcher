@@ -1,9 +1,8 @@
-import { type FormEvent, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { LauncherView, type LauncherState } from './LauncherView';
 
 interface LauncherBridge {
   State(): Promise<LauncherState>;
-  Connect(pin: string): Promise<void>;
   Retry(): Promise<void>;
   Quit(): Promise<void>;
   DownloadLauncher(): Promise<void>;
@@ -24,8 +23,6 @@ function invoke(operation: (() => Promise<void>) | undefined) {
 
 export function LauncherApplication() {
   const [state, setState] = useState<LauncherState>(initialState);
-  const [pin, setPin] = useState('');
-  const [connecting, setConnecting] = useState(false);
   const bridge = window.go?.desktop?.Launcher;
 
   useEffect(() => {
@@ -38,19 +35,5 @@ export function LauncherApplication() {
     return unsubscribe;
   }, [bridge]);
 
-  const connect = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!bridge) return;
-    setConnecting(true);
-    try {
-      await bridge.Connect(pin);
-      setPin('');
-    } catch {
-      // The Go bridge publishes the classified failure through launcher:state.
-    } finally {
-      setConnecting(false);
-    }
-  };
-
-  return <LauncherView state={state} pin={pin} connecting={connecting} onPinChange={setPin} onConnect={(event) => void connect(event)} onRetry={() => invoke(bridge?.Retry.bind(bridge))} onQuit={() => invoke(bridge?.Quit.bind(bridge))} onDownloadLauncher={() => invoke(bridge?.DownloadLauncher.bind(bridge))} />;
+  return <LauncherView state={state} onRetry={() => invoke(bridge?.Retry.bind(bridge))} onQuit={() => invoke(bridge?.Quit.bind(bridge))} onDownloadLauncher={() => invoke(bridge?.DownloadLauncher.bind(bridge))} />;
 }

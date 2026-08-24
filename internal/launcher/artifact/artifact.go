@@ -18,13 +18,14 @@ import (
 
 	releasepb "github.com/cineko-org/contracts/v3/gen/go/cineko/release"
 	"github.com/cineko-org/launcher/internal/launcher/managedfiles"
+	"github.com/cineko-org/launcher/internal/telemetry"
 )
 
 // DefaultDownloadTimeout bounds an artifact request when no client is supplied.
 const DefaultDownloadTimeout = 10 * time.Minute
 
 // ValidateMetadata checks the immutable URL, digest, size, and archive path
-// metadata received from Central before it is used by the Launcher.
+// metadata received from the static release origin before it is used by the Launcher.
 func ValidateMetadata(artifact *releasepb.Artifact) error {
 	if artifact == nil {
 		return errors.New("artifact is required")
@@ -169,7 +170,7 @@ func resumeArtifactDownload(
 	name string,
 	artifact *releasepb.Artifact,
 	onProgress func(int64),
-) (string, bool, error) {
+) (path string, restart bool, requestErr error) {
 	offset, err := regularFileSize(partialPath)
 	if err != nil || offset > artifact.GetSize() {
 		return "", true, nil
@@ -178,11 +179,22 @@ func resumeArtifactDownload(
 	if err != nil {
 		return "", false, fmt.Errorf("create %s artifact request: %w", name, err)
 	}
+	telemetry.EnsureRequestID(request)
+	started := time.Now()
 	response, err := client.Do(request)
 	if err != nil {
-		return "", false, fmt.Errorf("download %s artifact: %w", name, err)
+		requestErr = fmt.Errorf("download %s artifact: %w", name, err)
+		telemetry.LogHTTPClientRequest(ctx, request, response, started, telemetry.RequestBytes(request), 0, requestErr)
+		return "", false, requestErr
 	}
+	countedBody := &telemetry.CountedReadCloser{ReadCloser: response.Body}
+	response.Body = countedBody
 	defer func() { _ = response.Body.Close() }()
+	defer func() {
+		telemetry.LogHTTPClientRequest(
+			ctx, request, response, started, telemetry.RequestBytes(request), countedBody.Bytes(), requestErr,
+		)
+	}()
 	if restart, err := validateArtifactResponse(response, offset, artifact.GetSize()); restart || err != nil {
 		if err != nil {
 			return "", false, fmt.Errorf("download %s artifact: %w", name, err)

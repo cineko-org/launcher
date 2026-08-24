@@ -13,13 +13,11 @@ printf 'portable-linux-amd64\n' >"$assets/cineko-launcher-v1.2.3-linux-amd64.App
 
 run_publisher() {
   CINEKO_LAUNCHER_RELEASE_BASE=https://github.example/releases/download/v1.2.3 \
-  CINEKO_RELEASE_PUBLISH_TOKEN=publisher \
-  CINEKO_CENTRAL_URL="${CINEKO_CENTRAL_URL:?required}" \
     scripts/register-launcher-release.sh 1.2.3 2026-08-12T00:00:00Z "$assets"
 }
 
 mv "$assets/cineko-launcher-v1.2.3-windows-amd64.exe" "$assets/missing.exe"
-if CINEKO_CENTRAL_URL=https://central.invalid run_publisher >/dev/null 2>&1; then
+if run_publisher >/dev/null 2>&1; then
   printf 'publisher accepted an incomplete platform set\n' >&2
   exit 1
 fi

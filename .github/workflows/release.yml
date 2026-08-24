@@ -44,8 +44,8 @@ jobs:
     permissions:
       contents: read
     env:
-      CENTRAL_URL: ${{ secrets.CINEKO_CENTRAL_URL }}
       VERSION: ${{ needs.release.outputs.version }}
+      CINEKO_RELEASE_CHANNEL_BASE_URL: https://cdn.dsub.io/cineko/releases/channels/stable
     steps:
       - uses: actions/checkout@v7
         with:
@@ -59,9 +59,6 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - name: Require the Central endpoint
-        shell: bash
-        run: test -n "$CENTRAL_URL"
       - name: Configure Ubuntu package mirror
         if: matrix.platform == 'linux-amd64'
         shell: bash
@@ -92,7 +89,7 @@ jobs:
             -clean -trimpath -m -nosyncgomod \
             -platform "${{ matrix.wails_platform }}" \
             "${tags[@]}" \
-            -ldflags "-s -w -X main.launcherVersion=$VERSION -X main.launcherCentralURL=$CENTRAL_URL"
+            -ldflags "-s -w -X main.launcherVersion=$VERSION -X main.launcherReleaseBaseURL=$CINEKO_RELEASE_CHANNEL_BASE_URL"
       - name: Sign, notarize, and package macOS Launcher
         if: matrix.platform == 'darwin-arm64'
         shell: bash
@@ -140,12 +137,21 @@ jobs:
     permissions:
       contents: write
     env:
-      CINEKO_CENTRAL_URL: ${{ secrets.CINEKO_CENTRAL_URL }}
-      CINEKO_RELEASE_PUBLISH_TOKEN: ${{ secrets.CINEKO_RELEASE_PUBLISH_TOKEN }}
+      VERSION: ${{ needs.release.outputs.version }}
+      CINEKO_RELEASES_S3_ENDPOINT: ${{ secrets.CINEKO_RELEASES_S3_ENDPOINT }}
+      CINEKO_RELEASES_S3_ACCESS_KEY: ${{ secrets.CINEKO_RELEASES_S3_ACCESS_KEY }}
+      CINEKO_RELEASES_S3_SECRET_KEY: ${{ secrets.CINEKO_RELEASES_S3_SECRET_KEY }}
+      CINEKO_RELEASES_PUBLIC_BASE_URL: https://cdn.dsub.io/cineko/releases
+      CINEKO_LAUNCHER_RELEASE_BASE: https://cdn.dsub.io/cineko/releases/launcher/v${{ needs.release.outputs.version }}
+      CINEKO_RELEASE_PAYLOAD_OUT: release-assets/launcher-release-set.json
     steps:
       - uses: actions/checkout@v7
         with:
           ref: ${{ needs.release.outputs.tag }}
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
       - uses: actions/download-artifact@v8
         with:
           pattern: launcher-*
@@ -162,6 +168,12 @@ jobs:
       - name: Create checksums
         working-directory: release-assets
         run: sha256sum cineko-launcher-* > SHA256SUMS
+      - name: Publish the Launcher update channel
+        shell: bash
+        run: |
+          published_at="$(git show -s --format=%cI HEAD)"
+          scripts/register-launcher-release.sh "$VERSION" "$published_at" release-assets
+          scripts/publish-launcher-release.sh "$CINEKO_RELEASE_PAYLOAD_OUT" release-assets
       - name: Attach portable Launchers
         env:
           GH_TOKEN: ${{ github.token }}
@@ -170,6 +182,7 @@ jobs:
           "${{ needs.release.outputs.tag }}"
           release-assets/cineko-launcher-*
           release-assets/SHA256SUMS
+          release-assets/launcher-release-set.json
           --repo "${{ github.repository }}"
           --clobber
       - name: Publish the complete portable release
@@ -181,12 +194,3 @@ jobs:
           --repo "${{ github.repository }}"
           --draft=false
           --latest
-      - name: Register the stable Launcher set
-        env:
-          CINEKO_LAUNCHER_RELEASE_BASE: https://github.com/${{ github.repository }}/releases/download/${{ needs.release.outputs.tag }}
-        run: |
-          published_at="$(date --utc --date="@$(git show -s --format=%ct HEAD)" +%Y-%m-%dT%H:%M:%SZ)"
-          scripts/register-launcher-release.sh \
-            "${{ needs.release.outputs.version }}" \
-            "$published_at" \
-            release-assets

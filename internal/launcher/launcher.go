@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -20,22 +21,26 @@ import (
 
 	clientpb "github.com/cineko-org/contracts/v3/gen/go/cineko/client"
 	releasepb "github.com/cineko-org/contracts/v3/gen/go/cineko/release"
-	centralstore "github.com/cineko-org/launcher/internal/centralclient"
 	"github.com/cineko-org/launcher/internal/launcher/artifact"
 	"github.com/cineko-org/launcher/internal/launcher/managedfiles"
+	"github.com/cineko-org/launcher/internal/telemetry"
 
 	"golang.org/x/mod/semver"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
+const maximumReleaseManifestBytes = 2 << 20
+
 type Config struct {
-	CentralURL      string
-	UserID          string
-	AccessToken     string
-	PIN             string
+	ReleaseBaseURL  string
+	ClientPath      string
+	ChromePath      string
+	DriverPath      string
 	DataDir         string
 	Version         string
 	HTTPClient      *http.Client
+	Logger          *slog.Logger
 	Stdout          io.Writer
 	Stderr          io.Writer
 	OnProgress      func(Progress)
@@ -54,17 +59,11 @@ func (update *LauncherUpdateRequired) Error() string {
 type Stage string
 
 const (
-	maximumReleaseAttempts       = 3
-	clientUpdateRequiredExitCode = 75
-)
-
-const (
-	StageAuthenticating Stage = "authenticating"
-	StageChecking       Stage = "checking"
-	StageDownloading    Stage = "downloading"
-	StageInstalling     Stage = "installing"
-	StageLaunching      Stage = "launching"
-	StageRunning        Stage = "running"
+	StageChecking    Stage = "checking"
+	StageDownloading Stage = "downloading"
+	StageInstalling  Stage = "installing"
+	StageLaunching   Stage = "launching"
+	StageRunning     Stage = "running"
 )
 
 type Progress struct {
@@ -81,99 +80,34 @@ type identity struct {
 }
 
 type installedRelease struct {
-	Release            *releasepb.RuntimeRelease `json:"release"`
-	ClientPath         string                    `json:"clientPath"`
-	BrowserPath        string                    `json:"browserPath"`
-	DriverPath         string                    `json:"driverPath"`
-	ProbePublicKeyHash string                    `json:"probePublicKeyHash"`
-	ProbePublicKeySpec string                    `json:"probePublicKeySpec"`
-	Previous           *installedRelease         `json:"-"`
+	Release     *releasepb.RuntimeRelease `json:"release"`
+	ClientPath  string                    `json:"clientPath"`
+	BrowserPath string                    `json:"browserPath"`
+	DriverPath  string                    `json:"driverPath"`
+	Previous    *installedRelease         `json:"-"`
 }
 
+// Run starts a completely local Client. A configured public release directory
+// is used only to check and install updates; it is never an application server.
 func Run(ctx context.Context, config Config) error {
+	ctx = telemetry.WithLogger(ctx, config.Logger)
 	if err := validateConfig(config); err != nil {
 		return err
 	}
-	identity, store, err := prepareLauncher(ctx, config)
+	installation, err := loadOrCreateIdentity(config.DataDir)
 	if err != nil {
 		return err
 	}
-	defer func() { _ = store.Close() }()
-	for attempt := 0; attempt < maximumReleaseAttempts; attempt++ {
-		if err := ensureLauncherCurrent(ctx, config, store); err != nil {
+	if strings.TrimSpace(config.ClientPath) != "" {
+		installed, err := directClient(config)
+		if err != nil {
 			return err
 		}
-		err = launchCurrentRuntime(ctx, config, identity, store)
-		if !errors.Is(err, centralstore.ErrReleaseChanged) {
-			return err
-		}
-	}
-	return errors.New("runtime release changed repeatedly while preparing Client")
-}
-
-func prepareLauncher(
-	ctx context.Context,
-	config Config,
-) (identity, *centralstore.Store, error) {
-	report(config, Progress{Stage: StageChecking, Message: "Cineko 서버 연결 확인 중"})
-	if err := centralstore.CheckHealth(ctx, config.CentralURL, config.HTTPClient); err != nil {
-		return identity{}, nil, fmt.Errorf("check Central health: %w", err)
-	}
-	identity, err := loadOrCreateIdentity(config.DataDir)
-	if err != nil {
-		return identity, nil, err
-	}
-	report(config, Progress{Stage: StageAuthenticating, Message: "Central 로그인 확인 중"})
-	store, err := authenticateLauncher(ctx, config, identity)
-	if err != nil {
-		return identity, nil, err
-	}
-	device := &clientpb.Device{}
-	device.SetInstallationId(identity.InstallationID)
-	device.SetDeviceId(identity.DeviceID)
-	device.SetPlatform(runtime.GOOS)
-	device.SetArchitecture(runtime.GOARCH)
-	device.SetAppVersion("launcher/" + config.Version)
-	if _, err := store.RegisterDevice(ctx, device); err != nil {
-		_ = store.Close()
-		return identity, nil, fmt.Errorf("register launcher device: %w", err)
-	}
-	if err := saveLauncherSession(config.DataDir, store.Session()); err != nil {
-		_ = store.Close()
-		return identity, nil, fmt.Errorf("persist launcher session: %w", err)
-	}
-	return identity, store, nil
-}
-
-func ensureLauncherCurrent(ctx context.Context, config Config, store *centralstore.Store) error {
-	launcherRelease, err := store.CurrentLauncherRelease(ctx, runtime.GOOS, runtime.GOARCH)
-	if err != nil {
-		return fmt.Errorf("load current launcher release: %w", err)
-	}
-	if err := validateLauncherRelease(launcherRelease); err != nil {
+		_, err = runClient(ctx, config, installed, installation, nil, nil)
 		return err
 	}
-	if semver.Compare(canonicalVersion(launcherRelease.GetVersion()), canonicalVersion(config.Version)) > 0 {
-		return &LauncherUpdateRequired{Version: launcherRelease.GetVersion(), Artifact: launcherRelease.GetLauncher()}
-	}
-	return nil
-}
 
-func launchCurrentRuntime(
-	ctx context.Context,
-	config Config,
-	identity identity,
-	store *centralstore.Store,
-) error {
-	report(config, Progress{Stage: StageChecking, Message: "최신 릴리스 확인 중"})
-	release, err := store.CurrentRuntimeRelease(ctx, runtime.GOOS, runtime.GOARCH)
-	if err != nil {
-		return fmt.Errorf("load current client release: %w", err)
-	}
-	if err := validateReleaseForLauncher(release, config.Version); err != nil {
-		return err
-	}
-	installed, err := installRelease(ctx, config, release)
+	installed, err := resolveRuntime(ctx, config)
 	if err != nil {
 		return err
 	}
@@ -183,45 +117,141 @@ func launchCurrentRuntime(
 		}
 		return cause
 	}
-	nonce, err := randomToken(24)
-	if err != nil {
+	ready, err := runClient(ctx, config, installed, installation, func() {
+		finalizeInstalledRelease(config.DataDir, installed)
+	}, installed.Release)
+	if err != nil && !ready {
 		return rollback(err)
 	}
-	generation := store.ReleaseGeneration()
-	if generation <= 0 {
-		return rollback(errors.New("central returned no active release generation"))
-	}
-	launchContext := &clientpb.LaunchContext{}
-	launchContext.SetInstallationId(identity.InstallationID)
-	launchContext.SetDeviceId(identity.DeviceID)
-	launchContext.SetReleaseGeneration(generation)
-	launchContext.SetClientVersion(release.GetClient().GetVersion())
-	launchContext.SetArtifactSha256(release.GetClient().GetArtifact().GetSha256())
-	launchContext.SetBrowserRevision(release.GetBrowser().GetRevision())
-	launchContext.SetBrowserArtifactSha256(release.GetBrowser().GetArtifact().GetSha256())
-	launchContext.SetPlaywrightVersion(release.GetPlaywright().GetVersion())
-	launchContext.SetPlaywrightArtifactSha256(release.GetPlaywright().GetArtifact().GetSha256())
-	ticketRequest := &clientpb.LaunchTicketRequest{}
-	ticketRequest.SetContext(launchContext)
-	ticketRequest.SetNonce(nonce)
-	ticket, err := store.IssueLaunchTicket(ctx, ticketRequest)
-	if err != nil {
-		return rollback(fmt.Errorf("issue client launch ticket: %w", err))
-	}
-	if ticket.GetExpiresAt() == nil || !ticket.GetExpiresAt().AsTime().After(time.Now()) || ticket.GetLaunchTicket() == "" {
-		return rollback(errors.New("central returned an invalid launch ticket"))
-	}
-	report(config, Progress{Stage: StageLaunching, Message: "Cineko Client 시작 중"})
-	ready, err := runClient(ctx, config, installed, identity, ticket.GetLaunchTicket(), generation, func() {
-		finalizeInstalledRelease(config.DataDir, installed)
-	})
-	if err != nil {
-		if !ready {
-			return rollback(err)
+	return err
+}
+
+func resolveRuntime(ctx context.Context, config Config) (installedRelease, error) {
+	manifestPath := filepath.Join(config.DataDir, "runtime", "installed.json")
+	if strings.TrimSpace(config.ReleaseBaseURL) == "" {
+		report(config, Progress{Stage: StageChecking, Message: "설치된 Client 확인 중"})
+		installed, err := loadInstalledManifest(config.DataDir, manifestPath)
+		if err != nil {
+			return installedRelease{}, errors.New("설치된 Client가 없습니다. CINEKO_CLIENT_PATH 또는 CINEKO_RELEASE_BASE_URL을 설정하세요")
 		}
+		return installed, nil
+	}
+
+	report(config, Progress{Stage: StageChecking, Message: "공개 릴리스 확인 중"})
+	launcherRelease := &releasepb.LauncherRelease{}
+	if err := fetchReleaseProto(ctx, config, "launcher.json", launcherRelease); err != nil {
+		return fallbackInstalled(config, manifestPath, fmt.Errorf("load Launcher release: %w", err))
+	}
+	if err := validateLauncherRelease(launcherRelease); err != nil {
+		return fallbackInstalled(config, manifestPath, err)
+	}
+	if semver.Compare(canonicalVersion(launcherRelease.GetVersion()), canonicalVersion(config.Version)) > 0 {
+		return installedRelease{}, &LauncherUpdateRequired{Version: launcherRelease.GetVersion(), Artifact: launcherRelease.GetLauncher()}
+	}
+	runtimeRelease := &releasepb.RuntimeRelease{}
+	if err := fetchReleaseProto(ctx, config, "runtime.json", runtimeRelease); err != nil {
+		return fallbackInstalled(config, manifestPath, fmt.Errorf("load Client release: %w", err))
+	}
+	if err := validateReleaseForLauncher(runtimeRelease, config.Version); err != nil {
+		return fallbackInstalled(config, manifestPath, err)
+	}
+	return installRelease(ctx, config, runtimeRelease)
+}
+
+func fallbackInstalled(config Config, manifestPath string, remoteErr error) (installedRelease, error) {
+	if config.Logger != nil {
+		config.Logger.Warn("public release check failed; using installed Client", "error", remoteErr)
+	}
+	installed, err := loadInstalledManifest(config.DataDir, manifestPath)
+	if err != nil {
+		return installedRelease{}, remoteErr
+	}
+	report(config, Progress{Stage: StageChecking, Message: "설치된 Client로 시작"})
+	return installed, nil
+}
+
+func fetchReleaseProto(ctx context.Context, config Config, name string, destination proto.Message) error {
+	ctx = telemetry.WithLogger(ctx, config.Logger)
+	endpoint := strings.TrimRight(config.ReleaseBaseURL, "/") + "/" + runtime.GOOS + "-" + runtime.GOARCH + "/" + name
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
 		return err
 	}
+	request.Header.Set("Accept", "application/json")
+	telemetry.EnsureRequestID(request)
+	client := config.HTTPClient
+	if client == nil {
+		client = &http.Client{Timeout: 30 * time.Second}
+	}
+	started := time.Now()
+	response, err := client.Do(request)
+	if err != nil {
+		telemetry.LogHTTPClientRequest(ctx, request, nil, started, 0, 0, err)
+		return err
+	}
+	defer func() { _ = response.Body.Close() }()
+	contents, readErr := io.ReadAll(io.LimitReader(response.Body, maximumReleaseManifestBytes+1))
+	telemetry.LogHTTPClientRequest(ctx, request, response, started, 0, int64(len(contents)), readErr)
+	if readErr != nil {
+		return readErr
+	}
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("release manifest returned HTTP %d", response.StatusCode)
+	}
+	if len(contents) == 0 || len(contents) > maximumReleaseManifestBytes {
+		return errors.New("release manifest is empty or too large")
+	}
+	if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(contents, destination); err != nil {
+		return fmt.Errorf("decode release manifest: %w", err)
+	}
 	return nil
+}
+
+func directClient(config Config) (installedRelease, error) {
+	clientPath := filepath.Clean(strings.TrimSpace(config.ClientPath))
+	if !filepath.IsAbs(clientPath) {
+		return installedRelease{}, errors.New("CINEKO_CLIENT_PATH must be absolute")
+	}
+	info, err := os.Stat(clientPath)
+	if err != nil || info.IsDir() || info.Mode().Perm()&0o111 == 0 {
+		return installedRelease{}, errors.New("CINEKO_CLIENT_PATH must point to an executable Client")
+	}
+	return installedRelease{
+		ClientPath:  clientPath,
+		BrowserPath: strings.TrimSpace(config.ChromePath),
+		DriverPath:  strings.TrimSpace(config.DriverPath),
+	}, nil
+}
+
+func validateConfig(config Config) error {
+	if strings.TrimSpace(config.DataDir) == "" {
+		return errors.New("launcher data directory is required")
+	}
+	if strings.TrimSpace(config.ReleaseBaseURL) != "" {
+		if err := validateReleaseBaseURL(config.ReleaseBaseURL); err != nil {
+			return err
+		}
+	}
+	if !semver.IsValid(canonicalVersion(config.Version)) {
+		return errors.New("launcher version must be semantic versioning")
+	}
+	return nil
+}
+
+func validateReleaseBaseURL(rawURL string) error {
+	endpoint, err := url.ParseRequestURI(strings.TrimSpace(rawURL))
+	if err != nil || endpoint.Host == "" || endpoint.User != nil || endpoint.RawQuery != "" || endpoint.Fragment != "" {
+		return errors.New("release base URL must be an origin or directory without credentials, query, or fragment")
+	}
+	if endpoint.Scheme == "https" {
+		return nil
+	}
+	hostname := strings.ToLower(endpoint.Hostname())
+	address := net.ParseIP(hostname)
+	if endpoint.Scheme == "http" && (hostname == "localhost" || strings.HasSuffix(hostname, ".localhost") || address != nil && address.IsLoopback()) {
+		return nil
+	}
+	return errors.New("release base URL must use HTTPS unless it targets loopback")
 }
 
 func validateLauncherRelease(release *releasepb.LauncherRelease) error {
@@ -235,49 +265,15 @@ func validateLauncherRelease(release *releasepb.LauncherRelease) error {
 	return nil
 }
 
-func report(config Config, progress Progress) {
-	if config.OnProgress != nil {
-		config.OnProgress(progress)
-	}
-}
-
-func validateConfig(config Config) error {
-	if strings.TrimSpace(config.CentralURL) == "" || strings.TrimSpace(config.DataDir) == "" {
-		return errors.New("central URL and launcher data directory are required")
-	}
-	if err := validateCentralURL(config.CentralURL); err != nil {
-		return err
-	}
-	if !semver.IsValid(canonicalVersion(config.Version)) {
-		return errors.New("launcher version must be semantic versioning")
-	}
-	return nil
-}
-
-func validateCentralURL(rawURL string) error {
-	endpoint, err := url.ParseRequestURI(strings.TrimSpace(rawURL))
-	if err != nil || endpoint.Host == "" || endpoint.User != nil || endpoint.RawQuery != "" || endpoint.Fragment != "" ||
-		(endpoint.Path != "" && endpoint.Path != "/") {
-		return errors.New("central URL must be an origin without credentials, path, query, or fragment")
-	}
-	if endpoint.Scheme == "https" {
-		return nil
-	}
-	hostname := strings.ToLower(endpoint.Hostname())
-	address := net.ParseIP(hostname)
-	if endpoint.Scheme == "http" && (hostname == "localhost" || strings.HasSuffix(hostname, ".localhost") ||
-		address != nil && address.IsLoopback()) {
-		return nil
-	}
-	return errors.New("central URL must use HTTPS unless it targets loopback")
-}
-
-//nolint:gocyclo,cyclop // Runtime compatibility keeps every generated release component invariant explicit.
+//nolint:gocyclo,cyclop // Runtime compatibility keeps every release component invariant explicit.
 func validateReleaseForLauncher(release *releasepb.RuntimeRelease, launcherVersion string) error {
+	if release == nil {
+		return errors.New("release is incompatible with this launcher")
+	}
 	client := release.GetClient()
 	browser := release.GetBrowser()
 	playwright := release.GetPlaywright()
-	if release == nil || client == nil || browser == nil || playwright == nil ||
+	if client == nil || browser == nil || playwright == nil ||
 		client.GetChannel() != "stable" || browser.GetChannel() != "stable" || playwright.GetChannel() != "stable" ||
 		client.GetPlatform() != runtime.GOOS || client.GetArchitecture() != runtime.GOARCH ||
 		browser.GetPlatform() != runtime.GOOS || browser.GetArchitecture() != runtime.GOARCH ||
@@ -290,11 +286,7 @@ func validateReleaseForLauncher(release *releasepb.RuntimeRelease, launcherVersi
 	for _, component := range []struct {
 		name     string
 		artifact *releasepb.Artifact
-	}{
-		{name: "client", artifact: client.GetArtifact()},
-		{name: "browser", artifact: browser.GetArtifact()},
-		{name: "playwright", artifact: playwright.GetArtifact()},
-	} {
+	}{{"client", client.GetArtifact()}, {"browser", browser.GetArtifact()}, {"playwright", playwright.GetArtifact()}} {
 		if err := artifact.ValidateMetadata(component.artifact); err != nil {
 			return fmt.Errorf("%s artifact: %w", component.name, err)
 		}
@@ -320,6 +312,77 @@ func validateRuntimeCompatibility(release *releasepb.RuntimeRelease, launcherVer
 	return nil
 }
 
+func runClient(
+	ctx context.Context,
+	config Config,
+	installed installedRelease,
+	installation identity,
+	onReady func(),
+	release *releasepb.RuntimeRelease,
+) (bool, error) {
+	startupNonce, err := randomToken(24)
+	if err != nil {
+		return false, fmt.Errorf("create Client startup handshake: %w", err)
+	}
+	startupMarker, err := prepareStartupReady(config.DataDir, startupNonce)
+	if err != nil {
+		return false, fmt.Errorf("prepare Client startup handshake: %w", err)
+	}
+	defer func() { _ = os.Remove(startupMarker) }()
+	clientVersion := "dev"
+	launchContext := clientpb.LaunchContext_builder{
+		InstallationId: &installation.InstallationID,
+		DeviceId:       &installation.DeviceID,
+		ClientVersion:  &clientVersion,
+	}.Build()
+	if release != nil {
+		launchContext.SetClientVersion(release.GetClient().GetVersion())
+	}
+	envelope := clientpb.LaunchEnvelope_builder{Context: launchContext}.Build()
+	payload, err := protojson.MarshalOptions{UseProtoNames: false}.Marshal(envelope)
+	if err != nil {
+		return false, fmt.Errorf("encode Client launch payload: %w", err)
+	}
+	processContext, cancel := context.WithCancel(ctx)
+	defer cancel()
+	command := exec.CommandContext(processContext, installed.ClientPath) // #nosec G204 -- explicit local or hash-verified Client path.
+	command.Stdin = strings.NewReader(string(payload))
+	command.Stdout = defaultWriter(config.Stdout, os.Stdout)
+	command.Stderr = defaultWriter(config.Stderr, os.Stderr)
+	command.Env = append(sanitizedEnvironment(os.Environ()),
+		"CINEKO_DATA_DIR="+config.DataDir,
+		"CINEKO_STARTUP_READY_NONCE="+startupNonce,
+		"CINEKO_CHROME_PATH="+installed.BrowserPath,
+		"CINEKO_PLAYWRIGHT_DRIVER_PATH="+installed.DriverPath,
+	)
+	report(config, Progress{Stage: StageLaunching, Message: "Cineko Client 시작 중"})
+	if err := command.Start(); err != nil {
+		return false, fmt.Errorf("run Cineko Client: %w", err)
+	}
+	processDone := make(chan error, 1)
+	go func() { processDone <- command.Wait() }()
+	if err := awaitStartupReady(ctx, startupMarker, startupNonce, processDone, clientStartupTimeout, startupCheckInterval); err != nil {
+		cancel()
+		_ = command.Process.Kill()
+		select {
+		case <-processDone:
+		case <-time.After(time.Second):
+		}
+		return false, fmt.Errorf("start Cineko Client: %w", err)
+	}
+	if onReady != nil {
+		onReady()
+	}
+	report(config, Progress{Stage: StageRunning, Message: "Cineko Client 실행 중"})
+	if config.OnClientStarted != nil {
+		config.OnClientStarted()
+	}
+	if err := <-processDone; err != nil {
+		return true, fmt.Errorf("wait for Cineko Client: %w", err)
+	}
+	return true, nil
+}
+
 func validNumericRevision(value string) bool {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -333,93 +396,7 @@ func validNumericRevision(value string) bool {
 	return true
 }
 
-func runClient(
-	ctx context.Context,
-	config Config,
-	installed installedRelease,
-	identity identity,
-	launchTicket string,
-	releaseGeneration int64,
-	onReady func(),
-) (bool, error) {
-	startupNonce, err := randomToken(24)
-	if err != nil {
-		return false, fmt.Errorf("create Client startup handshake: %w", err)
-	}
-	startupMarker, err := prepareStartupReady(config.DataDir, startupNonce)
-	if err != nil {
-		return false, fmt.Errorf("prepare Client startup handshake: %w", err)
-	}
-	defer func() { _ = os.Remove(startupMarker) }()
-	launchContext := &clientpb.LaunchContext{}
-	launchContext.SetInstallationId(identity.InstallationID)
-	launchContext.SetDeviceId(identity.DeviceID)
-	launchContext.SetReleaseGeneration(releaseGeneration)
-	launchContext.SetClientVersion(installed.Release.GetClient().GetVersion())
-	launchContext.SetArtifactSha256(installed.Release.GetClient().GetArtifact().GetSha256())
-	launchContext.SetBrowserRevision(installed.Release.GetBrowser().GetRevision())
-	launchContext.SetBrowserArtifactSha256(installed.Release.GetBrowser().GetArtifact().GetSha256())
-	launchContext.SetPlaywrightVersion(installed.Release.GetPlaywright().GetVersion())
-	launchContext.SetPlaywrightArtifactSha256(installed.Release.GetPlaywright().GetArtifact().GetSha256())
-	envelope := &clientpb.LaunchEnvelope{}
-	envelope.SetLaunchTicket(launchTicket)
-	envelope.SetContext(launchContext)
-	payload, err := protojson.MarshalOptions{UseProtoNames: false}.Marshal(envelope)
-	if err != nil {
-		return false, fmt.Errorf("encode client launch payload: %w", err)
-	}
-	processContext, cancel := context.WithCancel(ctx)
-	defer cancel()
-	command := exec.CommandContext(processContext, installed.ClientPath) // #nosec G204 -- path is hash-verified release metadata.
-	command.Stdin = strings.NewReader(string(payload))
-	command.Stdout = defaultWriter(config.Stdout, os.Stdout)
-	command.Stderr = defaultWriter(config.Stderr, os.Stderr)
-	command.Env = append(sanitizedEnvironment(os.Environ()),
-		"CINEKO_CENTRAL_URL="+config.CentralURL,
-		"CINEKO_DATA_DIR="+config.DataDir,
-		"CINEKO_STARTUP_READY_NONCE="+startupNonce,
-		"CINEKO_CHROME_PATH="+installed.BrowserPath,
-		"CINEKO_PLAYWRIGHT_DRIVER_PATH="+installed.DriverPath,
-		"CINEKO_PROBE_BOOTSTRAP_PUBLIC_KEYS="+installed.ProbePublicKeySpec,
-	)
-	if err := command.Start(); err != nil {
-		return false, fmt.Errorf("run Cineko Client: %w", err)
-	}
-	processDone := make(chan error, 1)
-	go func() { processDone <- command.Wait() }()
-	if err := awaitStartupReady(
-		ctx, startupMarker, startupNonce, processDone, clientStartupTimeout, startupCheckInterval,
-	); err != nil {
-		cancel()
-		_ = command.Process.Kill()
-		select {
-		case <-processDone:
-		case <-time.After(time.Second):
-		}
-		return false, classifyClientExit(err)
-	}
-	if onReady != nil {
-		onReady()
-	}
-	report(config, Progress{Stage: StageRunning, Message: "Cineko Client 실행 중"})
-	if config.OnClientStarted != nil {
-		config.OnClientStarted()
-	}
-	if err := <-processDone; err != nil {
-		return true, classifyClientExit(err)
-	}
-	return true, nil
-}
-
-func classifyClientExit(err error) error {
-	var exitError *exec.ExitError
-	if errors.As(err, &exitError) && exitError.ExitCode() == clientUpdateRequiredExitCode {
-		return fmt.Errorf("client detected a newer release generation: %w", centralstore.ErrReleaseChanged)
-	}
-	return fmt.Errorf("wait for Cineko Client: %w", err)
-}
-
-func compareNumericRevision(left string, right string) int {
+func compareNumericRevision(left, right string) int {
 	left = strings.TrimLeft(strings.TrimSpace(left), "0")
 	right = strings.TrimLeft(strings.TrimSpace(right), "0")
 	if len(left) != len(right) {
@@ -440,12 +417,16 @@ func containsString(values []string, expected string) bool {
 	return false
 }
 
+func report(config Config, progress Progress) {
+	if config.OnProgress != nil {
+		config.OnProgress(progress)
+	}
+}
+
 func sanitizedEnvironment(environment []string) []string {
 	blocked := map[string]struct{}{
-		"CINEKO_CENTRAL_ACCESS_TOKEN": {},
-		"CINEKO_CENTRAL_USER_ID":      {},
-		"CINEKO_DATA_DIR":             {},
-		"CINEKO_DEV_DIRECT":           {},
+		"CINEKO_DATA_DIR":   {},
+		"CINEKO_DEV_DIRECT": {},
 	}
 	result := make([]string, 0, len(environment))
 	for _, entry := range environment {
@@ -488,7 +469,6 @@ func loadOrCreateIdentity(dataDir string) (identity, error) {
 	if !errors.Is(err, os.ErrNotExist) {
 		return identity{}, err
 	}
-	path := filepath.Join(dataDir, "installation.json")
 	installation, err := randomToken(16)
 	if err != nil {
 		return identity{}, err
@@ -498,15 +478,14 @@ func loadOrCreateIdentity(dataDir string) (identity, error) {
 		return identity{}, err
 	}
 	value = identity{InstallationID: "install_" + installation, DeviceID: "device_" + device}
-	if err := managedfiles.WriteJSONAtomic(path, value); err != nil {
+	if err := managedfiles.WriteJSONAtomic(filepath.Join(dataDir, "installation.json"), value); err != nil {
 		return identity{}, err
 	}
 	return value, nil
 }
 
 func loadIdentity(dataDir string) (identity, error) {
-	path := filepath.Join(dataDir, "installation.json")
-	contents, err := os.ReadFile(path) // #nosec G304 -- path is scoped to launcher data directory.
+	contents, err := os.ReadFile(filepath.Join(dataDir, "installation.json")) // #nosec G304 -- scoped launcher state path.
 	if err != nil {
 		return identity{}, fmt.Errorf("read launcher installation identity: %w", err)
 	}

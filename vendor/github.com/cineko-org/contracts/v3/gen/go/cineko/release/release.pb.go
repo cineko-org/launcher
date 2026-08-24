@@ -196,21 +196,20 @@ func (b0 Artifact_builder) Build() *Artifact {
 }
 
 type ClientRelease struct {
-	state                               protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Channel                  *string                `protobuf:"bytes,1,opt,name=channel"`
-	xxx_hidden_Platform                 *string                `protobuf:"bytes,2,opt,name=platform"`
-	xxx_hidden_Architecture             *string                `protobuf:"bytes,3,opt,name=architecture"`
-	xxx_hidden_Version                  *string                `protobuf:"bytes,4,opt,name=version"`
-	xxx_hidden_MinimumLauncherVersion   *string                `protobuf:"bytes,5,opt,name=minimum_launcher_version,json=minimumLauncherVersion"`
-	xxx_hidden_MinimumBrowserRevision   *string                `protobuf:"bytes,6,opt,name=minimum_browser_revision,json=minimumBrowserRevision"`
-	xxx_hidden_PlaywrightVersion        *string                `protobuf:"bytes,7,opt,name=playwright_version,json=playwrightVersion"`
-	xxx_hidden_Artifact                 *Artifact              `protobuf:"bytes,8,opt,name=artifact"`
-	xxx_hidden_ProbeBootstrapPublicKeys map[string]string      `protobuf:"bytes,9,rep,name=probe_bootstrap_public_keys,json=probeBootstrapPublicKeys" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	xxx_hidden_PublishedAt              *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=published_at,json=publishedAt"`
-	XXX_raceDetectHookData              protoimpl.RaceDetectHookData
-	XXX_presence                        [1]uint32
-	unknownFields                       protoimpl.UnknownFields
-	sizeCache                           protoimpl.SizeCache
+	state                             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Channel                *string                `protobuf:"bytes,1,opt,name=channel"`
+	xxx_hidden_Platform               *string                `protobuf:"bytes,2,opt,name=platform"`
+	xxx_hidden_Architecture           *string                `protobuf:"bytes,3,opt,name=architecture"`
+	xxx_hidden_Version                *string                `protobuf:"bytes,4,opt,name=version"`
+	xxx_hidden_MinimumLauncherVersion *string                `protobuf:"bytes,5,opt,name=minimum_launcher_version,json=minimumLauncherVersion"`
+	xxx_hidden_MinimumBrowserRevision *string                `protobuf:"bytes,6,opt,name=minimum_browser_revision,json=minimumBrowserRevision"`
+	xxx_hidden_PlaywrightVersion      *string                `protobuf:"bytes,7,opt,name=playwright_version,json=playwrightVersion"`
+	xxx_hidden_Artifact               *Artifact              `protobuf:"bytes,8,opt,name=artifact"`
+	xxx_hidden_PublishedAt            *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=published_at,json=publishedAt"`
+	XXX_raceDetectHookData            protoimpl.RaceDetectHookData
+	XXX_presence                      [1]uint32
+	unknownFields                     protoimpl.UnknownFields
+	sizeCache                         protoimpl.SizeCache
 }
 
 func (x *ClientRelease) Reset() {
@@ -315,13 +314,6 @@ func (x *ClientRelease) GetArtifact() *Artifact {
 	return nil
 }
 
-func (x *ClientRelease) GetProbeBootstrapPublicKeys() map[string]string {
-	if x != nil {
-		return x.xxx_hidden_ProbeBootstrapPublicKeys
-	}
-	return nil
-}
-
 func (x *ClientRelease) GetPublishedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.xxx_hidden_PublishedAt
@@ -331,45 +323,41 @@ func (x *ClientRelease) GetPublishedAt() *timestamppb.Timestamp {
 
 func (x *ClientRelease) SetChannel(v string) {
 	x.xxx_hidden_Channel = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 10)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 9)
 }
 
 func (x *ClientRelease) SetPlatform(v string) {
 	x.xxx_hidden_Platform = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 10)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 9)
 }
 
 func (x *ClientRelease) SetArchitecture(v string) {
 	x.xxx_hidden_Architecture = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 10)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 9)
 }
 
 func (x *ClientRelease) SetVersion(v string) {
 	x.xxx_hidden_Version = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 10)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 9)
 }
 
 func (x *ClientRelease) SetMinimumLauncherVersion(v string) {
 	x.xxx_hidden_MinimumLauncherVersion = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 10)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 9)
 }
 
 func (x *ClientRelease) SetMinimumBrowserRevision(v string) {
 	x.xxx_hidden_MinimumBrowserRevision = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 10)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 9)
 }
 
 func (x *ClientRelease) SetPlaywrightVersion(v string) {
 	x.xxx_hidden_PlaywrightVersion = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 6, 10)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 6, 9)
 }
 
 func (x *ClientRelease) SetArtifact(v *Artifact) {
 	x.xxx_hidden_Artifact = v
-}
-
-func (x *ClientRelease) SetProbeBootstrapPublicKeys(v map[string]string) {
-	x.xxx_hidden_ProbeBootstrapPublicKeys = v
 }
 
 func (x *ClientRelease) SetPublishedAt(v *timestamppb.Timestamp) {
@@ -485,16 +473,15 @@ func (x *ClientRelease) ClearPublishedAt() {
 type ClientRelease_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Channel                  *string
-	Platform                 *string
-	Architecture             *string
-	Version                  *string
-	MinimumLauncherVersion   *string
-	MinimumBrowserRevision   *string
-	PlaywrightVersion        *string
-	Artifact                 *Artifact
-	ProbeBootstrapPublicKeys map[string]string
-	PublishedAt              *timestamppb.Timestamp
+	Channel                *string
+	Platform               *string
+	Architecture           *string
+	Version                *string
+	MinimumLauncherVersion *string
+	MinimumBrowserRevision *string
+	PlaywrightVersion      *string
+	Artifact               *Artifact
+	PublishedAt            *timestamppb.Timestamp
 }
 
 func (b0 ClientRelease_builder) Build() *ClientRelease {
@@ -502,35 +489,34 @@ func (b0 ClientRelease_builder) Build() *ClientRelease {
 	b, x := &b0, m0
 	_, _ = b, x
 	if b.Channel != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 10)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 9)
 		x.xxx_hidden_Channel = b.Channel
 	}
 	if b.Platform != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 10)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 9)
 		x.xxx_hidden_Platform = b.Platform
 	}
 	if b.Architecture != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 10)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 9)
 		x.xxx_hidden_Architecture = b.Architecture
 	}
 	if b.Version != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 10)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 9)
 		x.xxx_hidden_Version = b.Version
 	}
 	if b.MinimumLauncherVersion != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 10)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 9)
 		x.xxx_hidden_MinimumLauncherVersion = b.MinimumLauncherVersion
 	}
 	if b.MinimumBrowserRevision != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 10)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 9)
 		x.xxx_hidden_MinimumBrowserRevision = b.MinimumBrowserRevision
 	}
 	if b.PlaywrightVersion != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 10)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 9)
 		x.xxx_hidden_PlaywrightVersion = b.PlaywrightVersion
 	}
 	x.xxx_hidden_Artifact = b.Artifact
-	x.xxx_hidden_ProbeBootstrapPublicKeys = b.ProbeBootstrapPublicKeys
 	x.xxx_hidden_PublishedAt = b.PublishedAt
 	return m0
 }
@@ -1230,241 +1216,6 @@ func (b0 LauncherRelease_builder) Build() *LauncherRelease {
 	return m0
 }
 
-type ProbeRelease struct {
-	state                      protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Channel         *string                `protobuf:"bytes,1,opt,name=channel"`
-	xxx_hidden_Version         *string                `protobuf:"bytes,2,opt,name=version"`
-	xxx_hidden_BrowserRevision *string                `protobuf:"bytes,3,opt,name=browser_revision,json=browserRevision"`
-	xxx_hidden_Image           *string                `protobuf:"bytes,4,opt,name=image"`
-	xxx_hidden_ImageDigest     *string                `protobuf:"bytes,5,opt,name=image_digest,json=imageDigest"`
-	xxx_hidden_PublishedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=published_at,json=publishedAt"`
-	XXX_raceDetectHookData     protoimpl.RaceDetectHookData
-	XXX_presence               [1]uint32
-	unknownFields              protoimpl.UnknownFields
-	sizeCache                  protoimpl.SizeCache
-}
-
-func (x *ProbeRelease) Reset() {
-	*x = ProbeRelease{}
-	mi := &file_cineko_release_release_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ProbeRelease) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ProbeRelease) ProtoMessage() {}
-
-func (x *ProbeRelease) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_release_release_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *ProbeRelease) GetChannel() string {
-	if x != nil {
-		if x.xxx_hidden_Channel != nil {
-			return *x.xxx_hidden_Channel
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *ProbeRelease) GetVersion() string {
-	if x != nil {
-		if x.xxx_hidden_Version != nil {
-			return *x.xxx_hidden_Version
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *ProbeRelease) GetBrowserRevision() string {
-	if x != nil {
-		if x.xxx_hidden_BrowserRevision != nil {
-			return *x.xxx_hidden_BrowserRevision
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *ProbeRelease) GetImage() string {
-	if x != nil {
-		if x.xxx_hidden_Image != nil {
-			return *x.xxx_hidden_Image
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *ProbeRelease) GetImageDigest() string {
-	if x != nil {
-		if x.xxx_hidden_ImageDigest != nil {
-			return *x.xxx_hidden_ImageDigest
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *ProbeRelease) GetPublishedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.xxx_hidden_PublishedAt
-	}
-	return nil
-}
-
-func (x *ProbeRelease) SetChannel(v string) {
-	x.xxx_hidden_Channel = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 6)
-}
-
-func (x *ProbeRelease) SetVersion(v string) {
-	x.xxx_hidden_Version = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 6)
-}
-
-func (x *ProbeRelease) SetBrowserRevision(v string) {
-	x.xxx_hidden_BrowserRevision = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 6)
-}
-
-func (x *ProbeRelease) SetImage(v string) {
-	x.xxx_hidden_Image = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 6)
-}
-
-func (x *ProbeRelease) SetImageDigest(v string) {
-	x.xxx_hidden_ImageDigest = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 6)
-}
-
-func (x *ProbeRelease) SetPublishedAt(v *timestamppb.Timestamp) {
-	x.xxx_hidden_PublishedAt = v
-}
-
-func (x *ProbeRelease) HasChannel() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
-}
-
-func (x *ProbeRelease) HasVersion() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
-}
-
-func (x *ProbeRelease) HasBrowserRevision() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
-}
-
-func (x *ProbeRelease) HasImage() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
-}
-
-func (x *ProbeRelease) HasImageDigest() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 4)
-}
-
-func (x *ProbeRelease) HasPublishedAt() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_PublishedAt != nil
-}
-
-func (x *ProbeRelease) ClearChannel() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_Channel = nil
-}
-
-func (x *ProbeRelease) ClearVersion() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
-	x.xxx_hidden_Version = nil
-}
-
-func (x *ProbeRelease) ClearBrowserRevision() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
-	x.xxx_hidden_BrowserRevision = nil
-}
-
-func (x *ProbeRelease) ClearImage() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
-	x.xxx_hidden_Image = nil
-}
-
-func (x *ProbeRelease) ClearImageDigest() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 4)
-	x.xxx_hidden_ImageDigest = nil
-}
-
-func (x *ProbeRelease) ClearPublishedAt() {
-	x.xxx_hidden_PublishedAt = nil
-}
-
-type ProbeRelease_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Channel         *string
-	Version         *string
-	BrowserRevision *string
-	Image           *string
-	ImageDigest     *string
-	PublishedAt     *timestamppb.Timestamp
-}
-
-func (b0 ProbeRelease_builder) Build() *ProbeRelease {
-	m0 := &ProbeRelease{}
-	b, x := &b0, m0
-	_, _ = b, x
-	if b.Channel != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 6)
-		x.xxx_hidden_Channel = b.Channel
-	}
-	if b.Version != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 6)
-		x.xxx_hidden_Version = b.Version
-	}
-	if b.BrowserRevision != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 6)
-		x.xxx_hidden_BrowserRevision = b.BrowserRevision
-	}
-	if b.Image != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 6)
-		x.xxx_hidden_Image = b.Image
-	}
-	if b.ImageDigest != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 6)
-		x.xxx_hidden_ImageDigest = b.ImageDigest
-	}
-	x.xxx_hidden_PublishedAt = b.PublishedAt
-	return m0
-}
-
 type RuntimeRelease struct {
 	state                 protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Client     *ClientRelease         `protobuf:"bytes,1,opt,name=client"`
@@ -1476,7 +1227,7 @@ type RuntimeRelease struct {
 
 func (x *RuntimeRelease) Reset() {
 	*x = RuntimeRelease{}
-	mi := &file_cineko_release_release_proto_msgTypes[6]
+	mi := &file_cineko_release_release_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1488,7 +1239,7 @@ func (x *RuntimeRelease) String() string {
 func (*RuntimeRelease) ProtoMessage() {}
 
 func (x *RuntimeRelease) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_release_release_proto_msgTypes[6]
+	mi := &file_cineko_release_release_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1592,7 +1343,7 @@ type ClientReleaseSet struct {
 
 func (x *ClientReleaseSet) Reset() {
 	*x = ClientReleaseSet{}
-	mi := &file_cineko_release_release_proto_msgTypes[7]
+	mi := &file_cineko_release_release_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1604,7 +1355,7 @@ func (x *ClientReleaseSet) String() string {
 func (*ClientReleaseSet) ProtoMessage() {}
 
 func (x *ClientReleaseSet) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_release_release_proto_msgTypes[7]
+	mi := &file_cineko_release_release_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1651,7 +1402,7 @@ type BrowserReleaseSet struct {
 
 func (x *BrowserReleaseSet) Reset() {
 	*x = BrowserReleaseSet{}
-	mi := &file_cineko_release_release_proto_msgTypes[8]
+	mi := &file_cineko_release_release_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1663,7 +1414,7 @@ func (x *BrowserReleaseSet) String() string {
 func (*BrowserReleaseSet) ProtoMessage() {}
 
 func (x *BrowserReleaseSet) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_release_release_proto_msgTypes[8]
+	mi := &file_cineko_release_release_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1710,7 +1461,7 @@ type PlaywrightReleaseSet struct {
 
 func (x *PlaywrightReleaseSet) Reset() {
 	*x = PlaywrightReleaseSet{}
-	mi := &file_cineko_release_release_proto_msgTypes[9]
+	mi := &file_cineko_release_release_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1722,7 +1473,7 @@ func (x *PlaywrightReleaseSet) String() string {
 func (*PlaywrightReleaseSet) ProtoMessage() {}
 
 func (x *PlaywrightReleaseSet) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_release_release_proto_msgTypes[9]
+	mi := &file_cineko_release_release_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1769,7 +1520,7 @@ type LauncherReleaseSet struct {
 
 func (x *LauncherReleaseSet) Reset() {
 	*x = LauncherReleaseSet{}
-	mi := &file_cineko_release_release_proto_msgTypes[10]
+	mi := &file_cineko_release_release_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1781,7 +1532,7 @@ func (x *LauncherReleaseSet) String() string {
 func (*LauncherReleaseSet) ProtoMessage() {}
 
 func (x *LauncherReleaseSet) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_release_release_proto_msgTypes[10]
+	mi := &file_cineko_release_release_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1819,65 +1570,6 @@ func (b0 LauncherReleaseSet_builder) Build() *LauncherReleaseSet {
 	return m0
 }
 
-type ProbeReleaseSet struct {
-	state               protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Releases *[]*ProbeRelease       `protobuf:"bytes,1,rep,name=releases"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
-}
-
-func (x *ProbeReleaseSet) Reset() {
-	*x = ProbeReleaseSet{}
-	mi := &file_cineko_release_release_proto_msgTypes[11]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ProbeReleaseSet) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ProbeReleaseSet) ProtoMessage() {}
-
-func (x *ProbeReleaseSet) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_release_release_proto_msgTypes[11]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *ProbeReleaseSet) GetReleases() []*ProbeRelease {
-	if x != nil {
-		if x.xxx_hidden_Releases != nil {
-			return *x.xxx_hidden_Releases
-		}
-	}
-	return nil
-}
-
-func (x *ProbeReleaseSet) SetReleases(v []*ProbeRelease) {
-	x.xxx_hidden_Releases = &v
-}
-
-type ProbeReleaseSet_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Releases []*ProbeRelease
-}
-
-func (b0 ProbeReleaseSet_builder) Build() *ProbeReleaseSet {
-	m0 := &ProbeReleaseSet{}
-	b, x := &b0, m0
-	_, _ = b, x
-	x.xxx_hidden_Releases = &b.Releases
-	return m0
-}
-
 type Registry struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Generation  int64                  `protobuf:"varint,1,opt,name=generation"`
@@ -1885,7 +1577,6 @@ type Registry struct {
 	xxx_hidden_Browsers    *BrowserReleaseSet     `protobuf:"bytes,3,opt,name=browsers"`
 	xxx_hidden_Playwright  *PlaywrightReleaseSet  `protobuf:"bytes,4,opt,name=playwright"`
 	xxx_hidden_Launchers   *LauncherReleaseSet    `protobuf:"bytes,5,opt,name=launchers"`
-	xxx_hidden_Probes      *ProbeReleaseSet       `protobuf:"bytes,6,opt,name=probes"`
 	XXX_raceDetectHookData protoimpl.RaceDetectHookData
 	XXX_presence           [1]uint32
 	unknownFields          protoimpl.UnknownFields
@@ -1894,7 +1585,7 @@ type Registry struct {
 
 func (x *Registry) Reset() {
 	*x = Registry{}
-	mi := &file_cineko_release_release_proto_msgTypes[12]
+	mi := &file_cineko_release_release_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1906,7 +1597,7 @@ func (x *Registry) String() string {
 func (*Registry) ProtoMessage() {}
 
 func (x *Registry) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_release_release_proto_msgTypes[12]
+	mi := &file_cineko_release_release_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1952,16 +1643,9 @@ func (x *Registry) GetLaunchers() *LauncherReleaseSet {
 	return nil
 }
 
-func (x *Registry) GetProbes() *ProbeReleaseSet {
-	if x != nil {
-		return x.xxx_hidden_Probes
-	}
-	return nil
-}
-
 func (x *Registry) SetGeneration(v int64) {
 	x.xxx_hidden_Generation = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 6)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 5)
 }
 
 func (x *Registry) SetClients(v *ClientReleaseSet) {
@@ -1978,10 +1662,6 @@ func (x *Registry) SetPlaywright(v *PlaywrightReleaseSet) {
 
 func (x *Registry) SetLaunchers(v *LauncherReleaseSet) {
 	x.xxx_hidden_Launchers = v
-}
-
-func (x *Registry) SetProbes(v *ProbeReleaseSet) {
-	x.xxx_hidden_Probes = v
 }
 
 func (x *Registry) HasGeneration() bool {
@@ -2019,13 +1699,6 @@ func (x *Registry) HasLaunchers() bool {
 	return x.xxx_hidden_Launchers != nil
 }
 
-func (x *Registry) HasProbes() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_Probes != nil
-}
-
 func (x *Registry) ClearGeneration() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
 	x.xxx_hidden_Generation = 0
@@ -2047,10 +1720,6 @@ func (x *Registry) ClearLaunchers() {
 	x.xxx_hidden_Launchers = nil
 }
 
-func (x *Registry) ClearProbes() {
-	x.xxx_hidden_Probes = nil
-}
-
 type Registry_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -2059,7 +1728,6 @@ type Registry_builder struct {
 	Browsers   *BrowserReleaseSet
 	Playwright *PlaywrightReleaseSet
 	Launchers  *LauncherReleaseSet
-	Probes     *ProbeReleaseSet
 }
 
 func (b0 Registry_builder) Build() *Registry {
@@ -2067,14 +1735,13 @@ func (b0 Registry_builder) Build() *Registry {
 	b, x := &b0, m0
 	_, _ = b, x
 	if b.Generation != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 6)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 5)
 		x.xxx_hidden_Generation = *b.Generation
 	}
 	x.xxx_hidden_Clients = b.Clients
 	x.xxx_hidden_Browsers = b.Browsers
 	x.xxx_hidden_Playwright = b.Playwright
 	x.xxx_hidden_Launchers = b.Launchers
-	x.xxx_hidden_Probes = b.Probes
 	return m0
 }
 
@@ -2089,7 +1756,7 @@ const file_cineko_release_release_proto_rawDesc = "" +
 	"\x06sha256\x18\x03 \x01(\tR\x06sha256\x12\x1e\n" +
 	"\n" +
 	"executable\x18\x04 \x01(\tR\n" +
-	"executable\"\xe4\x04\n" +
+	"executable\"\x9b\x03\n" +
 	"\rClientRelease\x12\x18\n" +
 	"\achannel\x18\x01 \x01(\tR\achannel\x12\x1a\n" +
 	"\bplatform\x18\x02 \x01(\tR\bplatform\x12\"\n" +
@@ -2098,13 +1765,8 @@ const file_cineko_release_release_proto_rawDesc = "" +
 	"\x18minimum_launcher_version\x18\x05 \x01(\tR\x16minimumLauncherVersion\x128\n" +
 	"\x18minimum_browser_revision\x18\x06 \x01(\tR\x16minimumBrowserRevision\x12-\n" +
 	"\x12playwright_version\x18\a \x01(\tR\x11playwrightVersion\x124\n" +
-	"\bartifact\x18\b \x01(\v2\x18.cineko.release.ArtifactR\bartifact\x12z\n" +
-	"\x1bprobe_bootstrap_public_keys\x18\t \x03(\v2;.cineko.release.ClientRelease.ProbeBootstrapPublicKeysEntryR\x18probeBootstrapPublicKeys\x12=\n" +
-	"\fpublished_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\vpublishedAt\x1aK\n" +
-	"\x1dProbeBootstrapPublicKeysEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc1\x02\n" +
+	"\bartifact\x18\b \x01(\v2\x18.cineko.release.ArtifactR\bartifact\x12=\n" +
+	"\fpublished_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\vpublishedAt\"\xc1\x02\n" +
 	"\x0eBrowserRelease\x12\x18\n" +
 	"\achannel\x18\x01 \x01(\tR\achannel\x12\x1a\n" +
 	"\bplatform\x18\x02 \x01(\tR\bplatform\x12\"\n" +
@@ -2126,13 +1788,6 @@ const file_cineko_release_release_proto_rawDesc = "" +
 	"\farchitecture\x18\x03 \x01(\tR\farchitecture\x12\x18\n" +
 	"\aversion\x18\x04 \x01(\tR\aversion\x124\n" +
 	"\blauncher\x18\x05 \x01(\v2\x18.cineko.release.ArtifactR\blauncher\x12=\n" +
-	"\fpublished_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\vpublishedAt\"\xe5\x01\n" +
-	"\fProbeRelease\x12\x18\n" +
-	"\achannel\x18\x01 \x01(\tR\achannel\x12\x18\n" +
-	"\aversion\x18\x02 \x01(\tR\aversion\x12)\n" +
-	"\x10browser_revision\x18\x03 \x01(\tR\x0fbrowserRevision\x12\x14\n" +
-	"\x05image\x18\x04 \x01(\tR\x05image\x12!\n" +
-	"\fimage_digest\x18\x05 \x01(\tR\vimageDigest\x12=\n" +
 	"\fpublished_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\vpublishedAt\"\xc4\x01\n" +
 	"\x0eRuntimeRelease\x125\n" +
 	"\x06client\x18\x01 \x01(\v2\x1d.cineko.release.ClientReleaseR\x06client\x128\n" +
@@ -2147,9 +1802,7 @@ const file_cineko_release_release_proto_rawDesc = "" +
 	"\x14PlaywrightReleaseSet\x12=\n" +
 	"\breleases\x18\x01 \x03(\v2!.cineko.release.PlaywrightReleaseR\breleases\"Q\n" +
 	"\x12LauncherReleaseSet\x12;\n" +
-	"\breleases\x18\x01 \x03(\v2\x1f.cineko.release.LauncherReleaseR\breleases\"K\n" +
-	"\x0fProbeReleaseSet\x128\n" +
-	"\breleases\x18\x01 \x03(\v2\x1c.cineko.release.ProbeReleaseR\breleases\"\xe6\x02\n" +
+	"\breleases\x18\x01 \x03(\v2\x1f.cineko.release.LauncherReleaseR\breleases\"\xad\x02\n" +
 	"\bRegistry\x12\x1e\n" +
 	"\n" +
 	"generation\x18\x01 \x01(\x03R\n" +
@@ -2159,56 +1812,48 @@ const file_cineko_release_release_proto_rawDesc = "" +
 	"\n" +
 	"playwright\x18\x04 \x01(\v2$.cineko.release.PlaywrightReleaseSetR\n" +
 	"playwright\x12@\n" +
-	"\tlaunchers\x18\x05 \x01(\v2\".cineko.release.LauncherReleaseSetR\tlaunchers\x127\n" +
-	"\x06probes\x18\x06 \x01(\v2\x1f.cineko.release.ProbeReleaseSetR\x06probesBBZ@github.com/cineko-org/contracts/v3/gen/go/cineko/release;releaseb\beditionsp\xe9\a"
+	"\tlaunchers\x18\x05 \x01(\v2\".cineko.release.LauncherReleaseSetR\tlaunchersBBZ@github.com/cineko-org/contracts/v3/gen/go/cineko/release;releaseb\beditionsp\xe9\a"
 
-var file_cineko_release_release_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_cineko_release_release_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_cineko_release_release_proto_goTypes = []any{
 	(*Artifact)(nil),              // 0: cineko.release.Artifact
 	(*ClientRelease)(nil),         // 1: cineko.release.ClientRelease
 	(*BrowserRelease)(nil),        // 2: cineko.release.BrowserRelease
 	(*PlaywrightRelease)(nil),     // 3: cineko.release.PlaywrightRelease
 	(*LauncherRelease)(nil),       // 4: cineko.release.LauncherRelease
-	(*ProbeRelease)(nil),          // 5: cineko.release.ProbeRelease
-	(*RuntimeRelease)(nil),        // 6: cineko.release.RuntimeRelease
-	(*ClientReleaseSet)(nil),      // 7: cineko.release.ClientReleaseSet
-	(*BrowserReleaseSet)(nil),     // 8: cineko.release.BrowserReleaseSet
-	(*PlaywrightReleaseSet)(nil),  // 9: cineko.release.PlaywrightReleaseSet
-	(*LauncherReleaseSet)(nil),    // 10: cineko.release.LauncherReleaseSet
-	(*ProbeReleaseSet)(nil),       // 11: cineko.release.ProbeReleaseSet
-	(*Registry)(nil),              // 12: cineko.release.Registry
-	nil,                           // 13: cineko.release.ClientRelease.ProbeBootstrapPublicKeysEntry
-	(*timestamppb.Timestamp)(nil), // 14: google.protobuf.Timestamp
+	(*RuntimeRelease)(nil),        // 5: cineko.release.RuntimeRelease
+	(*ClientReleaseSet)(nil),      // 6: cineko.release.ClientReleaseSet
+	(*BrowserReleaseSet)(nil),     // 7: cineko.release.BrowserReleaseSet
+	(*PlaywrightReleaseSet)(nil),  // 8: cineko.release.PlaywrightReleaseSet
+	(*LauncherReleaseSet)(nil),    // 9: cineko.release.LauncherReleaseSet
+	(*Registry)(nil),              // 10: cineko.release.Registry
+	(*timestamppb.Timestamp)(nil), // 11: google.protobuf.Timestamp
 }
 var file_cineko_release_release_proto_depIdxs = []int32{
 	0,  // 0: cineko.release.ClientRelease.artifact:type_name -> cineko.release.Artifact
-	13, // 1: cineko.release.ClientRelease.probe_bootstrap_public_keys:type_name -> cineko.release.ClientRelease.ProbeBootstrapPublicKeysEntry
-	14, // 2: cineko.release.ClientRelease.published_at:type_name -> google.protobuf.Timestamp
-	0,  // 3: cineko.release.BrowserRelease.artifact:type_name -> cineko.release.Artifact
-	14, // 4: cineko.release.BrowserRelease.published_at:type_name -> google.protobuf.Timestamp
-	0,  // 5: cineko.release.PlaywrightRelease.artifact:type_name -> cineko.release.Artifact
-	14, // 6: cineko.release.PlaywrightRelease.published_at:type_name -> google.protobuf.Timestamp
-	0,  // 7: cineko.release.LauncherRelease.launcher:type_name -> cineko.release.Artifact
-	14, // 8: cineko.release.LauncherRelease.published_at:type_name -> google.protobuf.Timestamp
-	14, // 9: cineko.release.ProbeRelease.published_at:type_name -> google.protobuf.Timestamp
-	1,  // 10: cineko.release.RuntimeRelease.client:type_name -> cineko.release.ClientRelease
-	2,  // 11: cineko.release.RuntimeRelease.browser:type_name -> cineko.release.BrowserRelease
-	3,  // 12: cineko.release.RuntimeRelease.playwright:type_name -> cineko.release.PlaywrightRelease
-	1,  // 13: cineko.release.ClientReleaseSet.releases:type_name -> cineko.release.ClientRelease
-	2,  // 14: cineko.release.BrowserReleaseSet.releases:type_name -> cineko.release.BrowserRelease
-	3,  // 15: cineko.release.PlaywrightReleaseSet.releases:type_name -> cineko.release.PlaywrightRelease
-	4,  // 16: cineko.release.LauncherReleaseSet.releases:type_name -> cineko.release.LauncherRelease
-	5,  // 17: cineko.release.ProbeReleaseSet.releases:type_name -> cineko.release.ProbeRelease
-	7,  // 18: cineko.release.Registry.clients:type_name -> cineko.release.ClientReleaseSet
-	8,  // 19: cineko.release.Registry.browsers:type_name -> cineko.release.BrowserReleaseSet
-	9,  // 20: cineko.release.Registry.playwright:type_name -> cineko.release.PlaywrightReleaseSet
-	10, // 21: cineko.release.Registry.launchers:type_name -> cineko.release.LauncherReleaseSet
-	11, // 22: cineko.release.Registry.probes:type_name -> cineko.release.ProbeReleaseSet
-	23, // [23:23] is the sub-list for method output_type
-	23, // [23:23] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	11, // 1: cineko.release.ClientRelease.published_at:type_name -> google.protobuf.Timestamp
+	0,  // 2: cineko.release.BrowserRelease.artifact:type_name -> cineko.release.Artifact
+	11, // 3: cineko.release.BrowserRelease.published_at:type_name -> google.protobuf.Timestamp
+	0,  // 4: cineko.release.PlaywrightRelease.artifact:type_name -> cineko.release.Artifact
+	11, // 5: cineko.release.PlaywrightRelease.published_at:type_name -> google.protobuf.Timestamp
+	0,  // 6: cineko.release.LauncherRelease.launcher:type_name -> cineko.release.Artifact
+	11, // 7: cineko.release.LauncherRelease.published_at:type_name -> google.protobuf.Timestamp
+	1,  // 8: cineko.release.RuntimeRelease.client:type_name -> cineko.release.ClientRelease
+	2,  // 9: cineko.release.RuntimeRelease.browser:type_name -> cineko.release.BrowserRelease
+	3,  // 10: cineko.release.RuntimeRelease.playwright:type_name -> cineko.release.PlaywrightRelease
+	1,  // 11: cineko.release.ClientReleaseSet.releases:type_name -> cineko.release.ClientRelease
+	2,  // 12: cineko.release.BrowserReleaseSet.releases:type_name -> cineko.release.BrowserRelease
+	3,  // 13: cineko.release.PlaywrightReleaseSet.releases:type_name -> cineko.release.PlaywrightRelease
+	4,  // 14: cineko.release.LauncherReleaseSet.releases:type_name -> cineko.release.LauncherRelease
+	6,  // 15: cineko.release.Registry.clients:type_name -> cineko.release.ClientReleaseSet
+	7,  // 16: cineko.release.Registry.browsers:type_name -> cineko.release.BrowserReleaseSet
+	8,  // 17: cineko.release.Registry.playwright:type_name -> cineko.release.PlaywrightReleaseSet
+	9,  // 18: cineko.release.Registry.launchers:type_name -> cineko.release.LauncherReleaseSet
+	19, // [19:19] is the sub-list for method output_type
+	19, // [19:19] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_cineko_release_release_proto_init() }
@@ -2222,7 +1867,7 @@ func file_cineko_release_release_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_cineko_release_release_proto_rawDesc), len(file_cineko_release_release_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -9,16 +10,18 @@ import (
 
 	"github.com/cineko-org/launcher/internal/desktop"
 	"github.com/cineko-org/launcher/internal/launcher"
+	"github.com/cineko-org/launcher/internal/telemetry"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
+	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
 var (
-	launcherVersion    = "0.0.0-dev"
-	launcherCentralURL string
+	launcherVersion        = "0.0.0-dev"
+	launcherReleaseBaseURL string
 )
 
 func main() {
@@ -42,9 +45,12 @@ func run() error {
 	}
 	defer closeLog()
 	app := desktop.New(launcher.Config{
-		CentralURL: resolvedCentralURL(),
-		DataDir:    dataDir,
-		Version:    launcherVersion,
+		ReleaseBaseURL: resolvedReleaseBaseURL(),
+		ClientPath:     strings.TrimSpace(os.Getenv("CINEKO_CLIENT_PATH")),
+		ChromePath:     strings.TrimSpace(os.Getenv("CINEKO_CHROME_PATH")),
+		DriverPath:     strings.TrimSpace(os.Getenv("CINEKO_PLAYWRIGHT_DRIVER_PATH")),
+		DataDir:        dataDir,
+		Version:        launcherVersion,
 	}, logger)
 	return wails.Run(&options.App{
 		Title:            "Cineko Launcher",
@@ -53,25 +59,29 @@ func run() error {
 		MinWidth:         360,
 		MinHeight:        520,
 		BackgroundColour: options.NewRGB(10, 11, 14),
-		AssetServer:      &assetserver.Options{Assets: launcher.Assets()},
-		OnStartup:        app.Startup,
-		Bind:             []interface{}{app},
+		AssetServer: &assetserver.Options{
+			Assets:     launcher.Assets(),
+			Middleware: telemetry.HTTPServerMiddleware(logger),
+		},
+		OnStartup: app.Startup,
+		Bind:      []interface{}{app},
 		SingleInstanceLock: &options.SingleInstanceLock{
 			UniqueId:               "io.cineko.launcher",
 			OnSecondInstanceLaunch: func(options.SecondInstanceData) { app.Show() },
 		},
 		Mac: &mac.Options{
 			Appearance: mac.NSAppearanceNameDarkAqua,
-			About:      &mac.AboutInfo{Title: "Cineko Launcher", Message: "Cineko 인증 및 업데이트"},
+			About:      &mac.AboutInfo{Title: "Cineko Launcher", Message: "Cineko 실행 및 업데이트"},
 		},
+		Windows: &windows.Options{WebviewUserDataPath: filepath.Join(dataDir, "webview-launcher")},
 	})
 }
 
-func resolvedCentralURL() string {
-	if value := strings.TrimSpace(os.Getenv("CINEKO_CENTRAL_URL")); value != "" {
+func resolvedReleaseBaseURL() string {
+	if value := strings.TrimSpace(os.Getenv("CINEKO_RELEASE_BASE_URL")); value != "" {
 		return value
 	}
-	return strings.TrimSpace(launcherCentralURL)
+	return strings.TrimSpace(launcherReleaseBaseURL)
 }
 
 func launcherLogger(dataDir string) (*slog.Logger, func(), error) {
@@ -89,12 +99,19 @@ func launcherLogger(dataDir string) (*slog.Logger, func(), error) {
 }
 
 func launcherDataDir() (string, error) {
-	if dataDir := strings.TrimSpace(os.Getenv("CINEKO_DATA_DIR")); dataDir != "" {
-		return dataDir, nil
+	return resolveLauncherDataDir(os.Getenv("CINEKO_DATA_DIR"), os.UserHomeDir)
+}
+
+func resolveLauncherDataDir(configured string, homeDir func() (string, error)) (string, error) {
+	if dataDir := strings.TrimSpace(configured); dataDir != "" {
+		if !filepath.IsAbs(dataDir) {
+			return "", errors.New("CINEKO_DATA_DIR must be an absolute path")
+		}
+		return filepath.Clean(dataDir), nil
 	}
-	root, err := os.UserConfigDir()
+	root, err := homeDir()
 	if err != nil {
-		return "", fmt.Errorf("find launcher data directory: %w", err)
+		return "", fmt.Errorf("find launcher home directory: %w", err)
 	}
-	return filepath.Join(root, "Cineko"), nil
+	return filepath.Join(root, "cineko"), nil
 }

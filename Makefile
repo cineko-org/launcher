@@ -1,6 +1,6 @@
 .PHONY: behavior-contract-check build check contract-check contract-release-check coverage desktop frontend-check install-wails lint security storybook storybook-build test workflow-check
 
-GOLANGCI_LINT_VERSION ?= v2.12.2
+GOLANGCI_LINT_VERSION ?= v2.13.1
 GOVULNCHECK_VERSION ?= v1.6.0
 ACTIONLINT_VERSION ?= v1.7.10
 GO_FILES := $(shell find . -path './vendor' -prune -o -path './frontend' -prune -o -name '*.go' -type f -print)
@@ -20,7 +20,7 @@ install-wails:
 
 desktop: install-wails
 	$(WAILS) build -clean -trimpath -m -nosyncgomod \
-		-ldflags "-s -w -X main.launcherVersion=$(VERSION) -X main.launcherCentralURL=$${CENTRAL_URL:-}"
+		-ldflags "-s -w -X main.launcherVersion=$(VERSION) -X main.launcherReleaseBaseURL=$${RELEASE_BASE_URL:-}"
 
 lint:
 	@test -z "$$(gofmt -l $(GO_FILES))" || (gofmt -l $(GO_FILES) && exit 1)
@@ -37,18 +37,15 @@ test:
 	$(GO) test -mod=vendor -race ./...
 
 contract-check:
-	grep -Eq '^# github.com/cineko-org/contracts/v3 v3.6.1$$' vendor/modules.txt
+	@! grep -Eq '^replace github.com/cineko-org/contracts/v3' go.mod
+	grep -Eq '^# github.com/cineko-org/contracts/v3 v3.7.0$$' vendor/modules.txt
 
-contract-release-check:
-	@! grep -Eq '^[[:space:]]*replace([[:space:]]|\()' go.mod
-	@grep -Eq '^[[:space:]]*github.com/cineko-org/contracts/v3 v3.6.1$$' go.mod
-	@grep -Eq '^# github.com/cineko-org/contracts/v3 v3.6.1$$' vendor/modules.txt
-	@grep -Eq '^github.com/cineko-org/contracts/v3 v3.6.1 h1:' go.sum
+contract-release-check: contract-check
 
 workflow-check:
 	$(GO) run github.com/rhysd/actionlint/cmd/actionlint@$(ACTIONLINT_VERSION) .github/workflows/*.yml
-	bash -n scripts/configure-ubuntu-mirror.sh scripts/package-linux-appimage.sh scripts/register-launcher-release.sh scripts/sign-notarize-macos-launcher.sh scripts/verify-macos-signing-workflow.sh
-	shellcheck scripts/configure-ubuntu-mirror.sh scripts/package-linux-appimage.sh scripts/register-launcher-release.sh scripts/sign-notarize-macos-launcher.sh scripts/verify-macos-signing-workflow.sh
+	bash -n scripts/configure-ubuntu-mirror.sh scripts/package-linux-appimage.sh scripts/publish-launcher-release.sh scripts/register-launcher-release.sh scripts/sign-notarize-macos-launcher.sh scripts/verify-macos-signing-workflow.sh
+	shellcheck scripts/configure-ubuntu-mirror.sh scripts/package-linux-appimage.sh scripts/publish-launcher-release.sh scripts/register-launcher-release.sh scripts/sign-notarize-macos-launcher.sh scripts/verify-macos-signing-workflow.sh
 	bash scripts/test-publish-launcher-release.sh
 	bash scripts/verify-macos-signing-workflow.sh
 

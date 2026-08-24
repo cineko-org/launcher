@@ -3,20 +3,13 @@ package main
 import (
 	"bytes"
 	"io"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync/atomic"
 	"testing"
-	"time"
 
-	"buf.build/go/protovalidate"
-	commonpb "github.com/cineko-org/contracts/v3/gen/go/cineko/common"
 	releasepb "github.com/cineko-org/contracts/v3/gen/go/cineko/release"
-	servicepb "github.com/cineko-org/contracts/v3/gen/go/cineko/service"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -36,7 +29,6 @@ func TestGeneratedLauncherReleaseSet(t *testing.T) {
 	if len(set.GetReleases()) != 3 || releaseKey(set.GetReleases()[0]) != "darwin/arm64" || releaseKey(set.GetReleases()[2]) != "windows/amd64" {
 		t.Fatalf("generated release set = %+v", set.GetReleases())
 	}
-
 	if _, err := readReleaseSet(paths[:2]); err == nil {
 		t.Fatal("incomplete Launcher release set accepted")
 	}
@@ -49,130 +41,9 @@ func TestGeneratedLauncherReleaseSet(t *testing.T) {
 	}
 }
 
-func TestPublishLauncherRelease(t *testing.T) {
-	_, setPayload := testReleaseSet(t)
-	payload := launcherPublishPayload(t, setPayload)
-	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		if request.Header.Get("Authorization") != "Bearer publisher" || request.Header.Get("Content-Type") != "application/json" {
-			t.Errorf("request headers = %v", request.Header)
-		}
-		input := &servicepb.PublishLauncherRequest{}
-		if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(readBody(t, request), input); err != nil {
-			t.Errorf("decode request: %v", err)
-		}
-		if err := protovalidate.Validate(input); err != nil {
-			t.Errorf("validate request: %v", err)
-		}
-		if len(input.GetReleaseSet().GetReleases()) != 3 {
-			t.Errorf("published Launcher releases = %d", len(input.GetReleaseSet().GetReleases()))
-		}
-		writer.Header().Set("X-Cineko-Release-Generation", "23")
-		writer.WriteHeader(http.StatusCreated)
-		_, _ = writer.Write([]byte("{}"))
-	}))
-	defer server.Close()
-
-	if err := publishLauncherRelease(t.Context(), server.Client(), func(time.Duration) {}, server.URL, "publisher", payload); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestPublishLauncherReleaseRetriesOnlyServerFailures(t *testing.T) {
-	_, setPayload := testReleaseSet(t)
-	payload := launcherPublishPayload(t, setPayload)
-	var attempts atomic.Int32
-	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
-		if attempts.Add(1) == 1 {
-			writer.WriteHeader(http.StatusServiceUnavailable)
-			return
-		}
-		writer.Header().Set("X-Cineko-Release-Generation", "24")
-		writer.WriteHeader(http.StatusOK)
-		_, _ = writer.Write([]byte("{}"))
-	}))
-	defer server.Close()
-
-	if err := publishLauncherRelease(t.Context(), server.Client(), func(time.Duration) {}, server.URL, "publisher", payload); err != nil {
-		t.Fatal(err)
-	}
-	if attempts.Load() != 2 {
-		t.Fatalf("server attempts = %d", attempts.Load())
-	}
-
-	var conflictAttempts atomic.Int32
-	conflictServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
-		conflictAttempts.Add(1)
-		code, message, requestID := "release_conflict", "immutable release changed", "request-1"
-		retryable := false
-		failure := commonpb.APIErrorResponse_builder{Error: commonpb.APIError_builder{
-			Code: &code, Message: &message, Retryable: &retryable, RequestId: &requestID,
-		}.Build()}.Build()
-		body, err := protojson.Marshal(failure)
-		if err != nil {
-			t.Error(err)
-		}
-		writer.WriteHeader(http.StatusConflict)
-		_, _ = writer.Write(body)
-	}))
-	defer conflictServer.Close()
-	if err := publishLauncherRelease(t.Context(), conflictServer.Client(), func(time.Duration) {}, conflictServer.URL, "publisher", payload); err == nil || !strings.Contains(err.Error(), "release_conflict") {
-		t.Fatalf("conflict error = %v", err)
-	}
-	if conflictAttempts.Load() != 1 {
-		t.Fatalf("conflict attempts = %d", conflictAttempts.Load())
-	}
-}
-
-func launcherPublishPayload(t *testing.T, setPayload []byte) []byte {
-	t.Helper()
-	set := &releasepb.LauncherReleaseSet{}
-	if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(setPayload, set); err != nil {
-		t.Fatal(err)
-	}
-	request := servicepb.PublishLauncherRequest_builder{ReleaseSet: set}.Build()
-	payload, err := protojson.Marshal(request)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return payload
-}
-
-func TestPublishResponseAndGenerationContract(t *testing.T) {
-	if err := validatePublishResponse(nil); err == nil {
-		t.Fatal("empty generated response accepted")
-	}
-	if err := validatePublishResponse([]byte("{}")); err != nil {
-		t.Fatalf("canonical generated response = %v", err)
-	}
-	if err := validatePublishResponse([]byte(`{"generation":"42"}`)); err == nil {
-		t.Fatal("out-of-contract response field accepted")
-	}
-	if generation, err := positiveGeneration("31"); err != nil || generation != 31 {
-		t.Fatalf("generation = %d, %v", generation, err)
-	}
-	for _, value := range []string{"", "0", "-1", "invalid"} {
-		if _, err := positiveGeneration(value); err == nil {
-			t.Fatalf("invalid generation %q accepted", value)
-		}
-	}
-}
-
-func TestPublishCommandKeepsTokenOutOfArguments(t *testing.T) {
-	paths, _ := testReleaseSet(t)
-	var set bytes.Buffer
-	if err := writeSet(&set, paths); err != nil {
-		t.Fatal(err)
-	}
-	setPath := filepath.Join(t.TempDir(), "launcher-set.json")
-	if err := os.WriteFile(setPath, set.Bytes(), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("CINEKO_RELEASE_PUBLISH_TOKEN", "")
-	if err := publishFromArgs([]string{"https://central.example", setPath}); err == nil || !strings.Contains(err.Error(), "token") {
-		t.Fatalf("missing environment token error = %v", err)
-	}
-	if err := publishFromArgs([]string{"https://central.example", "secret-on-command-line", setPath}); err == nil || !strings.Contains(err.Error(), usage) {
-		t.Fatalf("command-line token was accepted: %v", err)
+func TestReleaseContractHasNoRemotePublishCommand(t *testing.T) {
+	if err := run([]string{"publish", "https://example.invalid", "release.json"}); err == nil {
+		t.Fatal("retired remote publish command was accepted")
 	}
 }
 
@@ -211,13 +82,4 @@ func testReleaseSet(t *testing.T) ([]string, []byte) {
 		t.Fatal(err)
 	}
 	return paths, set.Bytes()
-}
-
-func readBody(t *testing.T, request *http.Request) []byte {
-	t.Helper()
-	payload, err := io.ReadAll(request.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return payload
 }

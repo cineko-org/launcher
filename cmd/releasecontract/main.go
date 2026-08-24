@@ -1,27 +1,20 @@
 package main
 
 import (
-	"bytes"
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
 	"buf.build/go/protovalidate"
-	commonpb "github.com/cineko-org/contracts/v3/gen/go/cineko/common"
 	releasepb "github.com/cineko-org/contracts/v3/gen/go/cineko/release"
-	servicepb "github.com/cineko-org/contracts/v3/gen/go/cineko/service"
 	artifactmetadata "github.com/cineko-org/launcher/internal/launcher/artifact"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -32,9 +25,7 @@ const (
 	usage = `usage:
   releasecontract release VERSION PLATFORM/ARCH ARTIFACT EXECUTABLE PUBLIC_URL PUBLISHED_AT
   releasecontract set RELEASE_JSON...
-  releasecontract publish CENTRAL_URL SET_JSON`
-	maxPublishAttempts = 4
-	maxResponseBytes   = 1 << 20
+  releasecontract verify-set SET_JSON`
 )
 
 var semverPattern = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`)
@@ -55,8 +46,12 @@ func run(args []string) error {
 		return writeRelease(os.Stdout, args[1:])
 	case "set":
 		return writeSet(os.Stdout, args[1:])
-	case "publish":
-		return publishFromArgs(args[1:])
+	case "verify-set":
+		if len(args) != 2 {
+			return errors.New(usage)
+		}
+		_, err := readSetFile(args[1])
+		return err
 	default:
 		return errors.New(usage)
 	}
@@ -93,128 +88,6 @@ func writeSet(destination io.Writer, paths []string) error {
 		return err
 	}
 	return marshalValidated(destination, set)
-}
-
-func publishFromArgs(args []string) error {
-	if len(args) != 2 {
-		return errors.New(usage)
-	}
-	centralURL := strings.TrimSuffix(args[0], "/")
-	parsed, err := url.ParseRequestURI(centralURL)
-	if err != nil || parsed.Scheme != "https" || parsed.Host == "" {
-		return errors.New("central URL must be HTTPS")
-	}
-	token := strings.TrimSpace(os.Getenv("CINEKO_RELEASE_PUBLISH_TOKEN"))
-	if token == "" {
-		return errors.New("release publisher token is required")
-	}
-	set, err := readSetFile(args[1])
-	if err != nil {
-		return err
-	}
-	input := servicepb.PublishLauncherRequest_builder{ReleaseSet: set}.Build()
-	if err := protovalidate.Validate(input); err != nil {
-		return fmt.Errorf("validate generated Launcher publish request: %w", err)
-	}
-	payload, err := protojson.Marshal(input)
-	if err != nil {
-		return fmt.Errorf("encode generated Launcher release set: %w", err)
-	}
-	endpoint := centralURL + "/v1/release-registry/launcher"
-	return publishLauncherRelease(context.Background(), &http.Client{Timeout: 30 * time.Second}, time.Sleep, endpoint, token, payload)
-}
-
-func publishLauncherRelease(
-	ctx context.Context,
-	client *http.Client,
-	sleep func(time.Duration),
-	endpoint string,
-	token string,
-	payload []byte,
-) error {
-	for attempt := 1; attempt <= maxPublishAttempts; attempt++ {
-		// #nosec G107,G704 -- publishFromArgs validates the operator-supplied Central HTTPS origin.
-		request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
-		if err != nil {
-			return fmt.Errorf("create Launcher release request: %w", err)
-		}
-		request.Header.Set("Authorization", "Bearer "+token)
-		request.Header.Set("Content-Type", "application/json")
-
-		// #nosec G704 -- the request URL is the validated Central release-registry endpoint.
-		response, err := client.Do(request)
-		if err != nil {
-			if attempt == maxPublishAttempts {
-				return fmt.Errorf("central release registration failed after %d network attempts: %w", attempt, err)
-			}
-			sleep(publishBackoff(attempt))
-			continue
-		}
-		body, readErr := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes+1))
-		closeErr := response.Body.Close()
-		if readErr != nil {
-			return fmt.Errorf("read Central release response: %w", readErr)
-		}
-		if closeErr != nil {
-			return fmt.Errorf("close Central release response: %w", closeErr)
-		}
-		if len(body) > maxResponseBytes {
-			return errors.New("central Launcher release response exceeds size limit")
-		}
-
-		if response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices {
-			if err := validatePublishResponse(body); err != nil {
-				return err
-			}
-			generation, err := positiveGeneration(response.Header.Get("X-Cineko-Release-Generation"))
-			if err != nil {
-				return err
-			}
-			fmt.Printf("registered Launcher release generation %d\n", generation)
-			return nil
-		}
-
-		failure := centralFailure(response.StatusCode, body)
-		if response.StatusCode < http.StatusInternalServerError || attempt == maxPublishAttempts {
-			return failure
-		}
-		sleep(publishBackoff(attempt))
-	}
-	return errors.New("central release registration exhausted all attempts")
-}
-
-func validatePublishResponse(payload []byte) error {
-	if len(bytes.TrimSpace(payload)) == 0 {
-		return errors.New("central returned an empty Launcher publish response")
-	}
-	response := servicepb.PublishLauncherResponse_builder{}.Build()
-	if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(payload, response); err != nil {
-		return fmt.Errorf("decode generated Launcher publish response: %w", err)
-	}
-	if err := protovalidate.Validate(response); err != nil {
-		return fmt.Errorf("validate generated Launcher publish response: %w", err)
-	}
-	return nil
-}
-
-func centralFailure(status int, payload []byte) error {
-	response := commonpb.APIErrorResponse_builder{}.Build()
-	if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(payload, response); err == nil && response.GetError() != nil {
-		return fmt.Errorf("central release registration failed with HTTP %d: %s: %s", status, response.GetError().GetCode(), response.GetError().GetMessage())
-	}
-	return fmt.Errorf("central release registration failed with HTTP %d", status)
-}
-
-func positiveGeneration(value string) (int64, error) {
-	generation, err := strconv.ParseInt(strings.TrimSpace(value), 10, 64)
-	if err != nil || generation <= 0 {
-		return 0, errors.New("central returned an invalid release generation header")
-	}
-	return generation, nil
-}
-
-func publishBackoff(attempt int) time.Duration {
-	return time.Second * time.Duration(1<<(attempt-1))
 }
 
 func readReleaseSet(paths []string) (*releasepb.LauncherReleaseSet, error) {

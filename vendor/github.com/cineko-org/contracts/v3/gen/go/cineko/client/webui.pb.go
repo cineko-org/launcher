@@ -10,7 +10,7 @@ import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	catalog "github.com/cineko-org/contracts/v3/gen/go/cineko/catalog"
 	common "github.com/cineko-org/contracts/v3/gen/go/cineko/common"
-	_ "github.com/cineko-org/contracts/v3/gen/go/cineko/seatmap"
+	seatmap "github.com/cineko-org/contracts/v3/gen/go/cineko/seatmap"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -206,6 +206,74 @@ func (b0 WebUIResourceList_builder) Build() *WebUIResourceList {
 	return m0
 }
 
+type WebUISeatMapResponse struct {
+	state                 protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Resolution *seatmap.Resolution    `protobuf:"bytes,1,opt,name=resolution"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *WebUISeatMapResponse) Reset() {
+	*x = WebUISeatMapResponse{}
+	mi := &file_cineko_client_webui_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WebUISeatMapResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WebUISeatMapResponse) ProtoMessage() {}
+
+func (x *WebUISeatMapResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_cineko_client_webui_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *WebUISeatMapResponse) GetResolution() *seatmap.Resolution {
+	if x != nil {
+		return x.xxx_hidden_Resolution
+	}
+	return nil
+}
+
+func (x *WebUISeatMapResponse) SetResolution(v *seatmap.Resolution) {
+	x.xxx_hidden_Resolution = v
+}
+
+func (x *WebUISeatMapResponse) HasResolution() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Resolution != nil
+}
+
+func (x *WebUISeatMapResponse) ClearResolution() {
+	x.xxx_hidden_Resolution = nil
+}
+
+type WebUISeatMapResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Resolution *seatmap.Resolution
+}
+
+func (b0 WebUISeatMapResponse_builder) Build() *WebUISeatMapResponse {
+	m0 := &WebUISeatMapResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Resolution = b.Resolution
+	return m0
+}
+
 type WebUITaskRunning struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -214,7 +282,7 @@ type WebUITaskRunning struct {
 
 func (x *WebUITaskRunning) Reset() {
 	*x = WebUITaskRunning{}
-	mi := &file_cineko_client_webui_proto_msgTypes[2]
+	mi := &file_cineko_client_webui_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -226,7 +294,7 @@ func (x *WebUITaskRunning) String() string {
 func (*WebUITaskRunning) ProtoMessage() {}
 
 func (x *WebUITaskRunning) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_webui_proto_msgTypes[2]
+	mi := &file_cineko_client_webui_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -257,7 +325,7 @@ type WebUITaskCompleted struct {
 
 func (x *WebUITaskCompleted) Reset() {
 	*x = WebUITaskCompleted{}
-	mi := &file_cineko_client_webui_proto_msgTypes[3]
+	mi := &file_cineko_client_webui_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -269,7 +337,7 @@ func (x *WebUITaskCompleted) String() string {
 func (*WebUITaskCompleted) ProtoMessage() {}
 
 func (x *WebUITaskCompleted) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_webui_proto_msgTypes[3]
+	mi := &file_cineko_client_webui_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -300,7 +368,7 @@ type WebUITaskFailed struct {
 
 func (x *WebUITaskFailed) Reset() {
 	*x = WebUITaskFailed{}
-	mi := &file_cineko_client_webui_proto_msgTypes[4]
+	mi := &file_cineko_client_webui_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -312,7 +380,7 @@ func (x *WebUITaskFailed) String() string {
 func (*WebUITaskFailed) ProtoMessage() {}
 
 func (x *WebUITaskFailed) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_webui_proto_msgTypes[4]
+	mi := &file_cineko_client_webui_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -343,7 +411,7 @@ type WebUITaskStopped struct {
 
 func (x *WebUITaskStopped) Reset() {
 	*x = WebUITaskStopped{}
-	mi := &file_cineko_client_webui_proto_msgTypes[5]
+	mi := &file_cineko_client_webui_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -355,7 +423,7 @@ func (x *WebUITaskStopped) String() string {
 func (*WebUITaskStopped) ProtoMessage() {}
 
 func (x *WebUITaskStopped) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_webui_proto_msgTypes[5]
+	mi := &file_cineko_client_webui_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -392,7 +460,7 @@ type WebUITaskState struct {
 
 func (x *WebUITaskState) Reset() {
 	*x = WebUITaskState{}
-	mi := &file_cineko_client_webui_proto_msgTypes[6]
+	mi := &file_cineko_client_webui_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -404,7 +472,7 @@ func (x *WebUITaskState) String() string {
 func (*WebUITaskState) ProtoMessage() {}
 
 func (x *WebUITaskState) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_webui_proto_msgTypes[6]
+	mi := &file_cineko_client_webui_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -695,7 +763,7 @@ func (b0 WebUITaskState_builder) Build() *WebUITaskState {
 type case_WebUITaskState_State protoreflect.FieldNumber
 
 func (x case_WebUITaskState_State) String() string {
-	md := file_cineko_client_webui_proto_msgTypes[6].Descriptor()
+	md := file_cineko_client_webui_proto_msgTypes[7].Descriptor()
 	if x == 0 {
 		return "not set"
 	}
@@ -739,7 +807,7 @@ type WebUITaskStatusResponse struct {
 
 func (x *WebUITaskStatusResponse) Reset() {
 	*x = WebUITaskStatusResponse{}
-	mi := &file_cineko_client_webui_proto_msgTypes[7]
+	mi := &file_cineko_client_webui_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -751,7 +819,7 @@ func (x *WebUITaskStatusResponse) String() string {
 func (*WebUITaskStatusResponse) ProtoMessage() {}
 
 func (x *WebUITaskStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_webui_proto_msgTypes[7]
+	mi := &file_cineko_client_webui_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -797,7 +865,7 @@ type WebUIAccountChecking struct {
 
 func (x *WebUIAccountChecking) Reset() {
 	*x = WebUIAccountChecking{}
-	mi := &file_cineko_client_webui_proto_msgTypes[8]
+	mi := &file_cineko_client_webui_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -809,7 +877,7 @@ func (x *WebUIAccountChecking) String() string {
 func (*WebUIAccountChecking) ProtoMessage() {}
 
 func (x *WebUIAccountChecking) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_webui_proto_msgTypes[8]
+	mi := &file_cineko_client_webui_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -840,7 +908,7 @@ type WebUIAccountAuthenticated struct {
 
 func (x *WebUIAccountAuthenticated) Reset() {
 	*x = WebUIAccountAuthenticated{}
-	mi := &file_cineko_client_webui_proto_msgTypes[9]
+	mi := &file_cineko_client_webui_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -852,7 +920,7 @@ func (x *WebUIAccountAuthenticated) String() string {
 func (*WebUIAccountAuthenticated) ProtoMessage() {}
 
 func (x *WebUIAccountAuthenticated) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_webui_proto_msgTypes[9]
+	mi := &file_cineko_client_webui_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -883,7 +951,7 @@ type WebUIAccountUnauthenticated struct {
 
 func (x *WebUIAccountUnauthenticated) Reset() {
 	*x = WebUIAccountUnauthenticated{}
-	mi := &file_cineko_client_webui_proto_msgTypes[10]
+	mi := &file_cineko_client_webui_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -895,7 +963,7 @@ func (x *WebUIAccountUnauthenticated) String() string {
 func (*WebUIAccountUnauthenticated) ProtoMessage() {}
 
 func (x *WebUIAccountUnauthenticated) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_webui_proto_msgTypes[10]
+	mi := &file_cineko_client_webui_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -926,7 +994,7 @@ type WebUIAccountError struct {
 
 func (x *WebUIAccountError) Reset() {
 	*x = WebUIAccountError{}
-	mi := &file_cineko_client_webui_proto_msgTypes[11]
+	mi := &file_cineko_client_webui_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -938,7 +1006,7 @@ func (x *WebUIAccountError) String() string {
 func (*WebUIAccountError) ProtoMessage() {}
 
 func (x *WebUIAccountError) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_webui_proto_msgTypes[11]
+	mi := &file_cineko_client_webui_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -962,21 +1030,19 @@ func (b0 WebUIAccountError_builder) Build() *WebUIAccountError {
 }
 
 type WebUIAccountState struct {
-	state                       protoimpl.MessageState    `protogen:"opaque.v1"`
-	xxx_hidden_State            isWebUIAccountState_State `protobuf_oneof:"state"`
-	xxx_hidden_CredentialsSaved bool                      `protobuf:"varint,5,opt,name=credentials_saved,json=credentialsSaved"`
-	xxx_hidden_AccountId        *string                   `protobuf:"bytes,6,opt,name=account_id,json=accountId"`
-	xxx_hidden_Message          *string                   `protobuf:"bytes,7,opt,name=message"`
-	xxx_hidden_CheckedAt        *timestamppb.Timestamp    `protobuf:"bytes,8,opt,name=checked_at,json=checkedAt"`
-	XXX_raceDetectHookData      protoimpl.RaceDetectHookData
-	XXX_presence                [1]uint32
-	unknownFields               protoimpl.UnknownFields
-	sizeCache                   protoimpl.SizeCache
+	state                  protoimpl.MessageState    `protogen:"opaque.v1"`
+	xxx_hidden_State       isWebUIAccountState_State `protobuf_oneof:"state"`
+	xxx_hidden_Message     *string                   `protobuf:"bytes,7,opt,name=message"`
+	xxx_hidden_CheckedAt   *timestamppb.Timestamp    `protobuf:"bytes,8,opt,name=checked_at,json=checkedAt"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *WebUIAccountState) Reset() {
 	*x = WebUIAccountState{}
-	mi := &file_cineko_client_webui_proto_msgTypes[12]
+	mi := &file_cineko_client_webui_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -988,7 +1054,7 @@ func (x *WebUIAccountState) String() string {
 func (*WebUIAccountState) ProtoMessage() {}
 
 func (x *WebUIAccountState) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_webui_proto_msgTypes[12]
+	mi := &file_cineko_client_webui_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1033,23 +1099,6 @@ func (x *WebUIAccountState) GetError() *WebUIAccountError {
 		}
 	}
 	return nil
-}
-
-func (x *WebUIAccountState) GetCredentialsSaved() bool {
-	if x != nil {
-		return x.xxx_hidden_CredentialsSaved
-	}
-	return false
-}
-
-func (x *WebUIAccountState) GetAccountId() string {
-	if x != nil {
-		if x.xxx_hidden_AccountId != nil {
-			return *x.xxx_hidden_AccountId
-		}
-		return ""
-	}
-	return ""
 }
 
 func (x *WebUIAccountState) GetMessage() string {
@@ -1101,19 +1150,9 @@ func (x *WebUIAccountState) SetError(v *WebUIAccountError) {
 	x.xxx_hidden_State = &webUIAccountState_Error{v}
 }
 
-func (x *WebUIAccountState) SetCredentialsSaved(v bool) {
-	x.xxx_hidden_CredentialsSaved = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 5)
-}
-
-func (x *WebUIAccountState) SetAccountId(v string) {
-	x.xxx_hidden_AccountId = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 5)
-}
-
 func (x *WebUIAccountState) SetMessage(v string) {
 	x.xxx_hidden_Message = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 5)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 3)
 }
 
 func (x *WebUIAccountState) SetCheckedAt(v *timestamppb.Timestamp) {
@@ -1159,25 +1198,11 @@ func (x *WebUIAccountState) HasError() bool {
 	return ok
 }
 
-func (x *WebUIAccountState) HasCredentialsSaved() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
-}
-
-func (x *WebUIAccountState) HasAccountId() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
-}
-
 func (x *WebUIAccountState) HasMessage() bool {
 	if x == nil {
 		return false
 	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
 }
 
 func (x *WebUIAccountState) HasCheckedAt() bool {
@@ -1215,18 +1240,8 @@ func (x *WebUIAccountState) ClearError() {
 	}
 }
 
-func (x *WebUIAccountState) ClearCredentialsSaved() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
-	x.xxx_hidden_CredentialsSaved = false
-}
-
-func (x *WebUIAccountState) ClearAccountId() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
-	x.xxx_hidden_AccountId = nil
-}
-
 func (x *WebUIAccountState) ClearMessage() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
 	x.xxx_hidden_Message = nil
 }
 
@@ -1267,10 +1282,8 @@ type WebUIAccountState_builder struct {
 	Unauthenticated *WebUIAccountUnauthenticated
 	Error           *WebUIAccountError
 	// -- end of xxx_hidden_State
-	CredentialsSaved *bool
-	AccountId        *string
-	Message          *string
-	CheckedAt        *timestamppb.Timestamp
+	Message   *string
+	CheckedAt *timestamppb.Timestamp
 }
 
 func (b0 WebUIAccountState_builder) Build() *WebUIAccountState {
@@ -1289,16 +1302,8 @@ func (b0 WebUIAccountState_builder) Build() *WebUIAccountState {
 	if b.Error != nil {
 		x.xxx_hidden_State = &webUIAccountState_Error{b.Error}
 	}
-	if b.CredentialsSaved != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 5)
-		x.xxx_hidden_CredentialsSaved = *b.CredentialsSaved
-	}
-	if b.AccountId != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 5)
-		x.xxx_hidden_AccountId = b.AccountId
-	}
 	if b.Message != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 5)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 3)
 		x.xxx_hidden_Message = b.Message
 	}
 	x.xxx_hidden_CheckedAt = b.CheckedAt
@@ -1308,7 +1313,7 @@ func (b0 WebUIAccountState_builder) Build() *WebUIAccountState {
 type case_WebUIAccountState_State protoreflect.FieldNumber
 
 func (x case_WebUIAccountState_State) String() string {
-	md := file_cineko_client_webui_proto_msgTypes[12].Descriptor()
+	md := file_cineko_client_webui_proto_msgTypes[13].Descriptor()
 	if x == 0 {
 		return "not set"
 	}
@@ -1342,119 +1347,6 @@ func (*webUIAccountState_Authenticated) isWebUIAccountState_State() {}
 func (*webUIAccountState_Unauthenticated) isWebUIAccountState_State() {}
 
 func (*webUIAccountState_Error) isWebUIAccountState_State() {}
-
-// AccountCredentials is accepted only by the local credential-vault
-// endpoint. It is never a Resource and must not be persisted in Central.
-type AccountCredentials struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Id          *string                `protobuf:"bytes,1,opt,name=id"`
-	xxx_hidden_Password    *string                `protobuf:"bytes,2,opt,name=password"`
-	XXX_raceDetectHookData protoimpl.RaceDetectHookData
-	XXX_presence           [1]uint32
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
-}
-
-func (x *AccountCredentials) Reset() {
-	*x = AccountCredentials{}
-	mi := &file_cineko_client_webui_proto_msgTypes[13]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AccountCredentials) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AccountCredentials) ProtoMessage() {}
-
-func (x *AccountCredentials) ProtoReflect() protoreflect.Message {
-	mi := &file_cineko_client_webui_proto_msgTypes[13]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-func (x *AccountCredentials) GetId() string {
-	if x != nil {
-		if x.xxx_hidden_Id != nil {
-			return *x.xxx_hidden_Id
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *AccountCredentials) GetPassword() string {
-	if x != nil {
-		if x.xxx_hidden_Password != nil {
-			return *x.xxx_hidden_Password
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *AccountCredentials) SetId(v string) {
-	x.xxx_hidden_Id = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 2)
-}
-
-func (x *AccountCredentials) SetPassword(v string) {
-	x.xxx_hidden_Password = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
-}
-
-func (x *AccountCredentials) HasId() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
-}
-
-func (x *AccountCredentials) HasPassword() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
-}
-
-func (x *AccountCredentials) ClearId() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_Id = nil
-}
-
-func (x *AccountCredentials) ClearPassword() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
-	x.xxx_hidden_Password = nil
-}
-
-type AccountCredentials_builder struct {
-	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
-
-	Id       *string
-	Password *string
-}
-
-func (b0 AccountCredentials_builder) Build() *AccountCredentials {
-	m0 := &AccountCredentials{}
-	b, x := &b0, m0
-	_, _ = b, x
-	if b.Id != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 2)
-		x.xxx_hidden_Id = b.Id
-	}
-	if b.Password != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
-		x.xxx_hidden_Password = b.Password
-	}
-	return m0
-}
 
 type WebUIActionStarted struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
@@ -2538,7 +2430,11 @@ const file_cineko_client_webui_proto_rawDesc = "" +
 	"\acatalog\x18\x02 \x01(\v2\x1c.cineko.catalog.CatalogIndexB\x06\xbaH\x03\xc8\x01\x01R\acatalog\x125\n" +
 	"\tresources\x18\x03 \x03(\v2\x17.cineko.client.ResourceR\tresources\"J\n" +
 	"\x11WebUIResourceList\x125\n" +
-	"\tresources\x18\x01 \x03(\v2\x17.cineko.client.ResourceR\tresources\"\x12\n" +
+	"\tresources\x18\x01 \x03(\v2\x17.cineko.client.ResourceR\tresources\"Z\n" +
+	"\x14WebUISeatMapResponse\x12B\n" +
+	"\n" +
+	"resolution\x18\x01 \x01(\v2\x1a.cineko.seatmap.ResolutionB\x06\xbaH\x03\xc8\x01\x01R\n" +
+	"resolution\"\x12\n" +
 	"\x10WebUITaskRunning\"\x14\n" +
 	"\x12WebUITaskCompleted\"\x11\n" +
 	"\x0fWebUITaskFailed\"\x12\n" +
@@ -2559,24 +2455,16 @@ const file_cineko_client_webui_proto_rawDesc = "" +
 	"\x14WebUIAccountChecking\"\x1b\n" +
 	"\x19WebUIAccountAuthenticated\"\x1d\n" +
 	"\x1bWebUIAccountUnauthenticated\"\x13\n" +
-	"\x11WebUIAccountError\"\xeb\x03\n" +
+	"\x11WebUIAccountError\"\x9f\x03\n" +
 	"\x11WebUIAccountState\x12A\n" +
 	"\bchecking\x18\x01 \x01(\v2#.cineko.client.WebUIAccountCheckingH\x00R\bchecking\x12P\n" +
 	"\rauthenticated\x18\x02 \x01(\v2(.cineko.client.WebUIAccountAuthenticatedH\x00R\rauthenticated\x12V\n" +
 	"\x0funauthenticated\x18\x03 \x01(\v2*.cineko.client.WebUIAccountUnauthenticatedH\x00R\x0funauthenticated\x128\n" +
-	"\x05error\x18\x04 \x01(\v2 .cineko.client.WebUIAccountErrorH\x00R\x05error\x12+\n" +
-	"\x11credentials_saved\x18\x05 \x01(\bR\x10credentialsSaved\x12\x1d\n" +
-	"\n" +
-	"account_id\x18\x06 \x01(\tR\taccountId\x12\x18\n" +
+	"\x05error\x18\x04 \x01(\v2 .cineko.client.WebUIAccountErrorH\x00R\x05error\x12\x18\n" +
 	"\amessage\x18\a \x01(\tR\amessage\x129\n" +
 	"\n" +
 	"checked_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcheckedAtB\x0e\n" +
-	"\x05state\x12\x05\xbaH\x02\b\x01\"X\n" +
-	"\x12AccountCredentials\x12\x1a\n" +
-	"\x02id\x18\x01 \x01(\tB\n" +
-	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\x02id\x12&\n" +
-	"\bpassword\x18\x02 \x01(\tB\n" +
-	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\bpassword\"\x14\n" +
+	"\x05state\x12\x05\xbaH\x02\b\x01\"\x14\n" +
 	"\x12WebUIActionStarted\"\x16\n" +
 	"\x14WebUIActionCompleted\"\xa8\x01\n" +
 	"\x11WebUIActionStatus\x12=\n" +
@@ -2615,18 +2503,18 @@ var file_cineko_client_webui_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_cineko_client_webui_proto_goTypes = []any{
 	(*WebUIState)(nil),                          // 0: cineko.client.WebUIState
 	(*WebUIResourceList)(nil),                   // 1: cineko.client.WebUIResourceList
-	(*WebUITaskRunning)(nil),                    // 2: cineko.client.WebUITaskRunning
-	(*WebUITaskCompleted)(nil),                  // 3: cineko.client.WebUITaskCompleted
-	(*WebUITaskFailed)(nil),                     // 4: cineko.client.WebUITaskFailed
-	(*WebUITaskStopped)(nil),                    // 5: cineko.client.WebUITaskStopped
-	(*WebUITaskState)(nil),                      // 6: cineko.client.WebUITaskState
-	(*WebUITaskStatusResponse)(nil),             // 7: cineko.client.WebUITaskStatusResponse
-	(*WebUIAccountChecking)(nil),                // 8: cineko.client.WebUIAccountChecking
-	(*WebUIAccountAuthenticated)(nil),           // 9: cineko.client.WebUIAccountAuthenticated
-	(*WebUIAccountUnauthenticated)(nil),         // 10: cineko.client.WebUIAccountUnauthenticated
-	(*WebUIAccountError)(nil),                   // 11: cineko.client.WebUIAccountError
-	(*WebUIAccountState)(nil),                   // 12: cineko.client.WebUIAccountState
-	(*AccountCredentials)(nil),                  // 13: cineko.client.AccountCredentials
+	(*WebUISeatMapResponse)(nil),                // 2: cineko.client.WebUISeatMapResponse
+	(*WebUITaskRunning)(nil),                    // 3: cineko.client.WebUITaskRunning
+	(*WebUITaskCompleted)(nil),                  // 4: cineko.client.WebUITaskCompleted
+	(*WebUITaskFailed)(nil),                     // 5: cineko.client.WebUITaskFailed
+	(*WebUITaskStopped)(nil),                    // 6: cineko.client.WebUITaskStopped
+	(*WebUITaskState)(nil),                      // 7: cineko.client.WebUITaskState
+	(*WebUITaskStatusResponse)(nil),             // 8: cineko.client.WebUITaskStatusResponse
+	(*WebUIAccountChecking)(nil),                // 9: cineko.client.WebUIAccountChecking
+	(*WebUIAccountAuthenticated)(nil),           // 10: cineko.client.WebUIAccountAuthenticated
+	(*WebUIAccountUnauthenticated)(nil),         // 11: cineko.client.WebUIAccountUnauthenticated
+	(*WebUIAccountError)(nil),                   // 12: cineko.client.WebUIAccountError
+	(*WebUIAccountState)(nil),                   // 13: cineko.client.WebUIAccountState
 	(*WebUIActionStarted)(nil),                  // 14: cineko.client.WebUIActionStarted
 	(*WebUIActionCompleted)(nil),                // 15: cineko.client.WebUIActionCompleted
 	(*WebUIActionStatus)(nil),                   // 16: cineko.client.WebUIActionStatus
@@ -2638,42 +2526,44 @@ var file_cineko_client_webui_proto_goTypes = []any{
 	(*WebUIAppEventUserRequest)(nil),            // 22: cineko.client.WebUIAppEventUserRequest
 	(*catalog.CatalogIndex)(nil),                // 23: cineko.catalog.CatalogIndex
 	(*Resource)(nil),                            // 24: cineko.client.Resource
-	(*timestamppb.Timestamp)(nil),               // 25: google.protobuf.Timestamp
-	(*common.MutationIdentity)(nil),             // 26: cineko.common.MutationIdentity
-	(*Preset)(nil),                              // 27: cineko.client.Preset
-	(*Monitor)(nil),                             // 28: cineko.client.Monitor
-	(*ResourceKind)(nil),                        // 29: cineko.client.ResourceKind
-	(*Reservation)(nil),                         // 30: cineko.client.Reservation
+	(*seatmap.Resolution)(nil),                  // 25: cineko.seatmap.Resolution
+	(*timestamppb.Timestamp)(nil),               // 26: google.protobuf.Timestamp
+	(*common.MutationIdentity)(nil),             // 27: cineko.common.MutationIdentity
+	(*Preset)(nil),                              // 28: cineko.client.Preset
+	(*Monitor)(nil),                             // 29: cineko.client.Monitor
+	(*ResourceKind)(nil),                        // 30: cineko.client.ResourceKind
+	(*Reservation)(nil),                         // 31: cineko.client.Reservation
 }
 var file_cineko_client_webui_proto_depIdxs = []int32{
 	23, // 0: cineko.client.WebUIState.catalog:type_name -> cineko.catalog.CatalogIndex
 	24, // 1: cineko.client.WebUIState.resources:type_name -> cineko.client.Resource
 	24, // 2: cineko.client.WebUIResourceList.resources:type_name -> cineko.client.Resource
-	2,  // 3: cineko.client.WebUITaskState.running:type_name -> cineko.client.WebUITaskRunning
-	3,  // 4: cineko.client.WebUITaskState.completed:type_name -> cineko.client.WebUITaskCompleted
-	4,  // 5: cineko.client.WebUITaskState.failed:type_name -> cineko.client.WebUITaskFailed
-	5,  // 6: cineko.client.WebUITaskState.stopped:type_name -> cineko.client.WebUITaskStopped
-	25, // 7: cineko.client.WebUITaskState.updated_at:type_name -> google.protobuf.Timestamp
-	6,  // 8: cineko.client.WebUITaskStatusResponse.tasks:type_name -> cineko.client.WebUITaskState
-	8,  // 9: cineko.client.WebUIAccountState.checking:type_name -> cineko.client.WebUIAccountChecking
-	9,  // 10: cineko.client.WebUIAccountState.authenticated:type_name -> cineko.client.WebUIAccountAuthenticated
-	10, // 11: cineko.client.WebUIAccountState.unauthenticated:type_name -> cineko.client.WebUIAccountUnauthenticated
-	11, // 12: cineko.client.WebUIAccountState.error:type_name -> cineko.client.WebUIAccountError
-	25, // 13: cineko.client.WebUIAccountState.checked_at:type_name -> google.protobuf.Timestamp
-	14, // 14: cineko.client.WebUIActionStatus.started:type_name -> cineko.client.WebUIActionStarted
-	15, // 15: cineko.client.WebUIActionStatus.completed:type_name -> cineko.client.WebUIActionCompleted
-	26, // 16: cineko.client.WebUIResourceMutation.mutation:type_name -> cineko.common.MutationIdentity
-	27, // 17: cineko.client.WebUIResourceMutation.preset:type_name -> cineko.client.Preset
-	28, // 18: cineko.client.WebUIResourceMutation.monitor:type_name -> cineko.client.Monitor
-	26, // 19: cineko.client.WebUIResourceDeletion.mutation:type_name -> cineko.common.MutationIdentity
-	29, // 20: cineko.client.WebUIResourceDeletion.kind:type_name -> cineko.client.ResourceKind
-	28, // 21: cineko.client.WebUIMonitorRetryRequest.monitor:type_name -> cineko.client.Monitor
-	30, // 22: cineko.client.WebUIReservationCancellationRequest.reservation:type_name -> cineko.client.Reservation
-	23, // [23:23] is the sub-list for method output_type
-	23, // [23:23] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	25, // 3: cineko.client.WebUISeatMapResponse.resolution:type_name -> cineko.seatmap.Resolution
+	3,  // 4: cineko.client.WebUITaskState.running:type_name -> cineko.client.WebUITaskRunning
+	4,  // 5: cineko.client.WebUITaskState.completed:type_name -> cineko.client.WebUITaskCompleted
+	5,  // 6: cineko.client.WebUITaskState.failed:type_name -> cineko.client.WebUITaskFailed
+	6,  // 7: cineko.client.WebUITaskState.stopped:type_name -> cineko.client.WebUITaskStopped
+	26, // 8: cineko.client.WebUITaskState.updated_at:type_name -> google.protobuf.Timestamp
+	7,  // 9: cineko.client.WebUITaskStatusResponse.tasks:type_name -> cineko.client.WebUITaskState
+	9,  // 10: cineko.client.WebUIAccountState.checking:type_name -> cineko.client.WebUIAccountChecking
+	10, // 11: cineko.client.WebUIAccountState.authenticated:type_name -> cineko.client.WebUIAccountAuthenticated
+	11, // 12: cineko.client.WebUIAccountState.unauthenticated:type_name -> cineko.client.WebUIAccountUnauthenticated
+	12, // 13: cineko.client.WebUIAccountState.error:type_name -> cineko.client.WebUIAccountError
+	26, // 14: cineko.client.WebUIAccountState.checked_at:type_name -> google.protobuf.Timestamp
+	14, // 15: cineko.client.WebUIActionStatus.started:type_name -> cineko.client.WebUIActionStarted
+	15, // 16: cineko.client.WebUIActionStatus.completed:type_name -> cineko.client.WebUIActionCompleted
+	27, // 17: cineko.client.WebUIResourceMutation.mutation:type_name -> cineko.common.MutationIdentity
+	28, // 18: cineko.client.WebUIResourceMutation.preset:type_name -> cineko.client.Preset
+	29, // 19: cineko.client.WebUIResourceMutation.monitor:type_name -> cineko.client.Monitor
+	27, // 20: cineko.client.WebUIResourceDeletion.mutation:type_name -> cineko.common.MutationIdentity
+	30, // 21: cineko.client.WebUIResourceDeletion.kind:type_name -> cineko.client.ResourceKind
+	29, // 22: cineko.client.WebUIMonitorRetryRequest.monitor:type_name -> cineko.client.Monitor
+	31, // 23: cineko.client.WebUIReservationCancellationRequest.reservation:type_name -> cineko.client.Reservation
+	24, // [24:24] is the sub-list for method output_type
+	24, // [24:24] is the sub-list for method input_type
+	24, // [24:24] is the sub-list for extension type_name
+	24, // [24:24] is the sub-list for extension extendee
+	0,  // [0:24] is the sub-list for field type_name
 }
 
 func init() { file_cineko_client_webui_proto_init() }
@@ -2682,13 +2572,13 @@ func file_cineko_client_webui_proto_init() {
 		return
 	}
 	file_cineko_client_client_proto_init()
-	file_cineko_client_webui_proto_msgTypes[6].OneofWrappers = []any{
+	file_cineko_client_webui_proto_msgTypes[7].OneofWrappers = []any{
 		(*webUITaskState_Running)(nil),
 		(*webUITaskState_Completed)(nil),
 		(*webUITaskState_Failed)(nil),
 		(*webUITaskState_Stopped)(nil),
 	}
-	file_cineko_client_webui_proto_msgTypes[12].OneofWrappers = []any{
+	file_cineko_client_webui_proto_msgTypes[13].OneofWrappers = []any{
 		(*webUIAccountState_Checking)(nil),
 		(*webUIAccountState_Authenticated)(nil),
 		(*webUIAccountState_Unauthenticated)(nil),

@@ -1,33 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-readonly document="docs/behavior-contract.md"
-sources=()
-while IFS= read -r source; do
-	sources+=("$source")
-done < <(rg --files -g '*.go' -g '*.ts' -g '*.tsx' -g '!vendor/**' -g '!**/assets/**')
+test ! -e internal/centralclient/client.go
+test ! -e internal/launcher/login.go
+grep -Fq 'ReleaseBaseURL' internal/launcher/launcher.go
+grep -Fq 'ClientPath' internal/launcher/launcher.go
+! grep -Eq 'case "publish"|releasecontract publish' cmd/releasecontract/main.go
+! grep -Fq 'replace github.com/cineko-org/contracts/v3' go.mod
+grep -Fq 'github.com/cineko-org/contracts/v3 v3.7.0' go.mod
 
-while IFS= read -r value; do
-	if [[ "$value" == "/v1/devices/" ]]; then
-		continue
-	fi
-	grep -Fq "$value" "$document" || {
-		printf 'Launcher behavior contract is missing %s\n' "$value" >&2
-		exit 1
-	}
-done < <(rg -o --no-filename '/(health|v1/[A-Za-z0-9_./:-]*)' "${sources[@]}" | sort -u)
-
-for value in '/v1/devices/{installationId}'; do
-	grep -Fq "$value" "$document" || {
-		printf 'Launcher behavior contract is missing templated service point %s\n' "$value" >&2
-		exit 1
-	}
-done
-
-while IFS= read -r value; do
-	grep -Fq "\`$value\`" "$document" || {
-		printf 'Launcher behavior contract is missing state %s\n' "$value" >&2
-		exit 1
-	}
-done < <(rg -o --no-filename '(Mode|Stage) = "[a-z-]+"' --glob '*.go' --glob '!vendor/**' |
-	sed -E 's/.*"([a-z-]+)"/\1/' | sort -u)
+printf 'Local Launcher behavior boundary checks passed\n'

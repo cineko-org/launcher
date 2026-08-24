@@ -1,7 +1,7 @@
-import type { FormEventHandler, ReactNode } from 'react';
-import { Alert, Box, Button, Group, PinInput, Progress, SimpleGrid, Stack, Text, Title } from '@mantine/core';
+import type { ReactNode } from 'react';
+import { Alert, Box, Button, Group, Progress, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 
-export type LauncherMode = 'checking' | 'login' | 'updating' | 'launcher-update' | 'launching' | 'error';
+export type LauncherMode = 'checking' | 'updating' | 'launcher-update' | 'launching' | 'error';
 
 export interface LauncherState {
   revision?: number;
@@ -18,10 +18,6 @@ export interface LauncherState {
 
 export interface LauncherViewProps {
   state: LauncherState;
-  pin: string;
-  connecting: boolean;
-  onPinChange: (value: string) => void;
-  onConnect: FormEventHandler<HTMLFormElement>;
   onRetry: () => void;
   onQuit: () => void;
   onDownloadLauncher: () => void;
@@ -97,21 +93,5 @@ export function LauncherView(props: LauncherViewProps) {
       </Shell>
     );
   }
-  return (
-    <Shell state={state}>
-      <Box component="form" onSubmit={props.onConnect} maw={680}>
-        <Stack gap={28}>
-          <Heading title="기기 연결" message="관리자에게 받은 6자리 PIN을 입력하세요." />
-          <Stack gap="lg">
-            {state.message !== '6자리 PIN을 입력하세요' ? <Alert color="red">{state.message}</Alert> : null}
-            <Stack gap="xs" maw={456}>
-              <Text component="label" fw={600}>PIN</Text>
-              <PinInput length={6} type="number" size="lg" value={props.pin} onChange={props.onPinChange} autoFocus oneTimeCode aria-label="6자리 PIN" styles={{ root: { display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: 8 }, input: { width: '100%', minWidth: 0 } }} />
-            </Stack>
-            <Button type="submit" size="md" loading={props.connecting} disabled={props.pin.length !== 6} w="100%" maw={456}>연결하고 시작</Button>
-          </Stack>
-        </Stack>
-      </Box>
-    </Shell>
-  );
+  return <Shell state={state}><Heading title="시작 준비 중" message={state.message} /><Progress value={100} animated /></Shell>;
 }
