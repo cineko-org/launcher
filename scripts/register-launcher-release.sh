@@ -49,7 +49,7 @@ append_release() {
 
   local release_path="$temporary_root/${platform_key}.json"
   "$release_contract" release "$version" "$platform/$architecture" "$artifact_path" "$executable" \
-    "${public_base}/${filename}" "$published_at" >"$release_path"
+    "${public_base}/${platform_key}/${filename}" "$published_at" >"$release_path"
   release_paths+=("$release_path")
 }
 
