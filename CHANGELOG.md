@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.2](https://github.com/cineko-org/launcher/compare/v1.4.1...v1.4.2) (2026-08-31)
+
+
+### Bug Fixes
+
+* keep Client runtime launcher-owned and observable ([#35](https://github.com/cineko-org/launcher/issues/35)) ([51e5c93](https://github.com/cineko-org/launcher/commit/51e5c93730dfec1ac50890b81a0bc0416b3bbcb8))
+
 ## [1.4.1](https://github.com/cineko-org/launcher/compare/v1.4.0...v1.4.1) (2026-08-24)
 
 
