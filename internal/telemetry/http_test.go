@@ -37,7 +37,7 @@ func TestEnsureRequestIDGeneratesAndPropagates(t *testing.T) {
 
 func TestLogHTTPClientRequestEmitsCanonicalSuccessAndFailure(t *testing.T) {
 	var output bytes.Buffer
-	logger := slog.New(slog.NewJSONHandler(&output, nil))
+	logger := slog.New(slog.NewJSONHandler(&output, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	ctx := WithLogger(context.Background(), logger)
 	request := &http.Request{
 		Method:        http.MethodPost,
@@ -69,7 +69,7 @@ func TestLogHTTPClientRequestEmitsCanonicalSuccessAndFailure(t *testing.T) {
 			t.Fatalf("success[%q] = %#v, want %#v", key, success[key], want)
 		}
 	}
-	if success["level"] != "INFO" {
+	if success["level"] != "DEBUG" {
 		t.Fatalf("success level = %#v", success["level"])
 	}
 	if failure["level"] != "ERROR" || failure["error"] != "upstream unavailable" {
@@ -79,7 +79,7 @@ func TestLogHTTPClientRequestEmitsCanonicalSuccessAndFailure(t *testing.T) {
 
 func TestLogHTTPClientRequestMarksHTTPFailureWithoutError(t *testing.T) {
 	var output bytes.Buffer
-	logger := slog.New(slog.NewJSONHandler(&output, nil))
+	logger := slog.New(slog.NewJSONHandler(&output, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	request := &http.Request{Method: http.MethodGet, Header: make(http.Header), URL: &url.URL{Path: "/health"}}
 	LogHTTPClientRequest(WithLogger(context.Background(), logger), request, &http.Response{StatusCode: http.StatusServiceUnavailable}, time.Now(), 0, 0, nil)
 	if !strings.Contains(output.String(), `"level":"ERROR"`) || !strings.Contains(output.String(), `"error":"HTTP 503"`) {
@@ -89,7 +89,7 @@ func TestLogHTTPClientRequestMarksHTTPFailureWithoutError(t *testing.T) {
 
 func TestHTTPServerMiddlewarePropagatesRequestIDAndLogsCompletion(t *testing.T) {
 	var output bytes.Buffer
-	logger := slog.New(slog.NewJSONHandler(&output, nil))
+	logger := slog.New(slog.NewJSONHandler(&output, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	handler := HTTPServerMiddleware(logger)(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if got := request.Header.Get(requestIDHeader); got != "incoming-request" || RequestID(request.Context()) != got {
 			t.Errorf("handler request identity = header=%q context=%q", got, RequestID(request.Context()))
@@ -116,7 +116,7 @@ func TestHTTPServerMiddlewarePropagatesRequestIDAndLogsCompletion(t *testing.T) 
 			t.Fatalf("server record[%q] = %#v, want %#v", key, record[key], want)
 		}
 	}
-	if record["level"] != "INFO" {
+	if record["level"] != "DEBUG" {
 		t.Fatalf("server level = %#v", record["level"])
 	}
 }

@@ -76,7 +76,7 @@ func TestUserFacingErrorDoesNotExposeInternalDetail(t *testing.T) {
 
 func TestDownloadLauncherContextUsesAppLogger(t *testing.T) {
 	var output bytes.Buffer
-	logger := slog.New(slog.NewJSONHandler(&output, nil))
+	logger := slog.New(slog.NewJSONHandler(&output, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	app := New(launcher.Config{Version: "1.2.3", Logger: logger}, nil)
 	request := &http.Request{Method: http.MethodGet, Header: make(http.Header), URL: &url.URL{Path: "/launcher.zip"}}
 	telemetry.LogHTTPClientRequest(app.requestContext(context.Background(), app.config), request, &http.Response{StatusCode: http.StatusOK}, time.Now(), 0, 0, nil)

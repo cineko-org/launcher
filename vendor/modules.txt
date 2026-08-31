@@ -31,6 +31,9 @@ github.com/cineko-org/contracts/v3/gen/go/cineko/common
 github.com/cineko-org/contracts/v3/gen/go/cineko/observation
 github.com/cineko-org/contracts/v3/gen/go/cineko/release
 github.com/cineko-org/contracts/v3/gen/go/cineko/seatmap
+# github.com/cineko-org/probe/v2 v2.8.2
+## explicit; go 1.27
+github.com/cineko-org/probe/v2/networkcapture
 # github.com/go-ole/go-ole v1.3.0
 ## explicit; go 1.12
 github.com/go-ole/go-ole
@@ -76,6 +79,8 @@ github.com/jchv/go-winloader/internal/memloader
 github.com/jchv/go-winloader/internal/pe
 github.com/jchv/go-winloader/internal/vmem
 github.com/jchv/go-winloader/internal/winloader
+# github.com/kr/pretty v0.3.1
+## explicit; go 1.12
 # github.com/labstack/echo/v4 v4.15.4
 ## explicit; go 1.25.0
 github.com/labstack/echo/v4
@@ -111,6 +116,8 @@ github.com/pkg/errors
 # github.com/rivo/uniseg v0.4.7
 ## explicit; go 1.18
 github.com/rivo/uniseg
+# github.com/rogpeppe/go-internal v1.11.0
+## explicit; go 1.19
 # github.com/samber/lo v1.53.0
 ## explicit; go 1.18
 github.com/samber/lo
@@ -231,11 +238,11 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-# google.golang.org/genproto/googleapis/api v0.0.0-20250811230008-5f3141c8851a
-## explicit; go 1.23.0
+# google.golang.org/genproto/googleapis/api v0.0.0-20260819154853-08b0e4226688
+## explicit; go 1.25.0
 google.golang.org/genproto/googleapis/api/expr/v1alpha1
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20250811230008-5f3141c8851a
-## explicit; go 1.23.0
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20260819154853-08b0e4226688
+## explicit; go 1.25.0
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/protobuf v1.36.12
 ## explicit; go 1.23
@@ -280,3 +287,5 @@ google.golang.org/protobuf/types/known/fieldmaskpb
 google.golang.org/protobuf/types/known/structpb
 google.golang.org/protobuf/types/known/timestamppb
 google.golang.org/protobuf/types/known/wrapperspb
+# gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
+## explicit; go 1.11
