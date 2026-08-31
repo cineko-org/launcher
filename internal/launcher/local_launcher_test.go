@@ -72,7 +72,7 @@ func TestFetchReleaseProtoUsesPublicPlatformPathAndLogs(t *testing.T) {
 	}))
 	t.Cleanup(server.Close)
 	var logs bytes.Buffer
-	config := Config{ReleaseBaseURL: server.URL + "/releases", HTTPClient: server.Client(), Logger: slog.New(slog.NewJSONHandler(&logs, nil))}
+	config := Config{ReleaseBaseURL: server.URL + "/releases", HTTPClient: server.Client(), Logger: slog.New(slog.NewJSONHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug}))}
 	output := &releasepb.LauncherRelease{}
 	if err := fetchReleaseProto(t.Context(), config, "launcher.json", output); err != nil {
 		t.Fatal(err)

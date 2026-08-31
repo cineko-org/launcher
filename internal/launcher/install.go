@@ -13,6 +13,7 @@ import (
 	"github.com/cineko-org/launcher/internal/launcher/artifact"
 	"github.com/cineko-org/launcher/internal/launcher/managedfiles"
 	installedruntime "github.com/cineko-org/launcher/internal/launcher/runtime"
+	"github.com/cineko-org/probe/v2/networkcapture"
 
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -39,6 +40,7 @@ func installRelease(
 	if client == nil {
 		client = &http.Client{Timeout: artifact.DefaultDownloadTimeout}
 	}
+	client = networkcapture.HTTPClient(config.NetworkCapture, "launcher", config.Logger, client)
 	paths, err := installArtifacts(ctx, config, client, release)
 	if err != nil {
 		return installedRelease{}, err

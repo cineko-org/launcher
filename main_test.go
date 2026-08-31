@@ -46,7 +46,7 @@ func TestResolvedReleaseBaseURLPrefersEnvironmentOverride(t *testing.T) {
 
 func TestWailsAssetServerStaticMiddlewareLogsRequest(t *testing.T) {
 	var output bytes.Buffer
-	logger := slog.New(slog.NewJSONHandler(&output, nil))
+	logger := slog.New(slog.NewJSONHandler(&output, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	handler, err := wailsassetserver.NewAssetHandler(assetoptions.Options{
 		Assets:     launcher.Assets(),
 		Middleware: telemetry.HTTPServerMiddleware(logger),

@@ -24,6 +24,7 @@ import (
 	"github.com/cineko-org/launcher/internal/launcher/artifact"
 	"github.com/cineko-org/launcher/internal/launcher/managedfiles"
 	"github.com/cineko-org/launcher/internal/telemetry"
+	"github.com/cineko-org/probe/v2/networkcapture"
 
 	"golang.org/x/mod/semver"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -39,12 +40,14 @@ type Config struct {
 	DriverPath      string
 	DataDir         string
 	Version         string
+	Debug           bool
 	HTTPClient      *http.Client
 	Logger          *slog.Logger
 	Stdout          io.Writer
 	Stderr          io.Writer
 	OnProgress      func(Progress)
 	OnClientStarted func()
+	NetworkCapture  *networkcapture.Store
 }
 
 type LauncherUpdateRequired struct {
@@ -93,6 +96,13 @@ func Run(ctx context.Context, config Config) error {
 	ctx = telemetry.WithLogger(ctx, config.Logger)
 	if err := validateConfig(config); err != nil {
 		return err
+	}
+	if config.NetworkCapture == nil {
+		capture, err := networkcapture.NewStore(filepath.Join(config.DataDir, "artifacts", "network"), config.Logger, networkcapture.WithDebug(config.Debug))
+		if err != nil {
+			return fmt.Errorf("initialize Launcher network capture: %w", err)
+		}
+		config.NetworkCapture = capture
 	}
 	installation, err := loadOrCreateIdentity(config.DataDir)
 	if err != nil {
@@ -183,6 +193,7 @@ func fetchReleaseProto(ctx context.Context, config Config, name string, destinat
 	if client == nil {
 		client = &http.Client{Timeout: 30 * time.Second}
 	}
+	client = networkcapture.HTTPClient(config.NetworkCapture, "launcher", config.Logger, client)
 	started := time.Now()
 	response, err := client.Do(request)
 	if err != nil {

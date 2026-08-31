@@ -166,7 +166,7 @@ func LogHTTPClientRequest(
 	if err == nil && (status < http.StatusOK || status >= http.StatusMultipleChoices) {
 		err = fmt.Errorf("HTTP %d", status)
 	}
-	level := slog.LevelInfo
+	level := slog.LevelDebug
 	if err != nil {
 		level = slog.LevelError
 	}
@@ -309,7 +309,7 @@ func logHTTPServerRequest(
 	if err == nil && (status < http.StatusOK || status >= http.StatusMultipleChoices) {
 		err = fmt.Errorf("HTTP %d", status)
 	}
-	level := slog.LevelInfo
+	level := slog.LevelDebug
 	if err != nil {
 		level = slog.LevelError
 	}

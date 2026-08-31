@@ -39,7 +39,8 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	logger, closeLog, err := launcherLogger(dataDir)
+	debugMode := launcherDebugMode()
+	logger, closeLog, err := launcherLogger(dataDir, debugMode)
 	if err != nil {
 		return err
 	}
@@ -51,6 +52,7 @@ func run() error {
 		DriverPath:     strings.TrimSpace(os.Getenv("CINEKO_PLAYWRIGHT_DRIVER_PATH")),
 		DataDir:        dataDir,
 		Version:        launcherVersion,
+		Debug:          debugMode,
 	}, logger)
 	return wails.Run(&options.App{
 		Title:            "Cineko Launcher",
@@ -84,7 +86,7 @@ func resolvedReleaseBaseURL() string {
 	return strings.TrimSpace(launcherReleaseBaseURL)
 }
 
-func launcherLogger(dataDir string) (*slog.Logger, func(), error) {
+func launcherLogger(dataDir string, debug bool) (*slog.Logger, func(), error) {
 	if err := os.MkdirAll(dataDir, 0o700); err != nil {
 		return nil, nil, fmt.Errorf("create launcher data directory: %w", err)
 	}
@@ -94,8 +96,21 @@ func launcherLogger(dataDir string) (*slog.Logger, func(), error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("open launcher log: %w", err)
 	}
-	logger := slog.New(slog.NewJSONHandler(file, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	level := slog.LevelInfo
+	if debug {
+		level = slog.LevelDebug
+	}
+	logger := slog.New(slog.NewJSONHandler(file, &slog.HandlerOptions{Level: level}))
 	return logger, func() { _ = file.Close() }, nil
+}
+
+func launcherDebugMode() bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("CINEKO_DEBUG"))) {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
 }
 
 func launcherDataDir() (string, error) {
