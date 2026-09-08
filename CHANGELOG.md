@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.0](https://github.com/cineko-org/launcher/compare/v1.4.3...v1.5.0) (2026-09-08)
+
+
+### Features
+
+* package macOS Launcher as drag-to-Applications DMG ([#39](https://github.com/cineko-org/launcher/issues/39)) ([184a6f3](https://github.com/cineko-org/launcher/commit/184a6f3a7931d22f985198f8a4293dfe8f76def0))
+
+
+### Bug Fixes
+
+* activate the owned Client window and simplify update status ([#40](https://github.com/cineko-org/launcher/issues/40)) ([f0bceb1](https://github.com/cineko-org/launcher/commit/f0bceb1c89bca5597fe72a2e3a84633e669877c5))
+
 ## [1.4.3](https://github.com/cineko-org/launcher/compare/v1.4.2...v1.4.3) (2026-09-08)
 
 
