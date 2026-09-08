@@ -166,6 +166,9 @@ func (app *Launcher) Show() {
 	app.mu.RLock()
 	ctx, pid := app.ctx, app.clientPID
 	app.mu.RUnlock()
+	if ctx != nil && ctx.Err() != nil {
+		return
+	}
 	if pid > 0 && app.focusClient != nil {
 		if err := app.focusClient(pid); err != nil && app.logger != nil {
 			app.logger.Warn("could not activate Cineko window", "event", "launcher.client.activation.failed", "pid", pid, "error", err)
@@ -217,6 +220,9 @@ func (app *Launcher) execute(ctx context.Context, config launcher.Config) {
 	app.mu.Lock()
 	app.running = false
 	app.mu.Unlock()
+	if ctx.Err() != nil {
+		return
+	}
 	if err == nil {
 		runtime.Quit(ctx)
 		return
