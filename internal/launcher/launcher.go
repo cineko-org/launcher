@@ -46,7 +46,8 @@ type Config struct {
 	Stdout          io.Writer
 	Stderr          io.Writer
 	OnProgress      func(Progress)
-	OnClientStarted func()
+	OnClientStarted func(pid int)
+	OnClientStopped func()
 	NetworkCapture  *networkcapture.Store
 }
 
@@ -393,7 +394,10 @@ func runClient(
 	}
 	report(config, Progress{Stage: StageRunning, Message: "Cineko Client 실행 중"})
 	if config.OnClientStarted != nil {
-		config.OnClientStarted()
+		config.OnClientStarted(command.Process.Pid)
+	}
+	if config.OnClientStopped != nil {
+		defer config.OnClientStopped()
 	}
 	if err := <-processDone; err != nil {
 		return true, fmt.Errorf("wait for Cineko Client: %w", err)

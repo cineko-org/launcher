@@ -1,0 +1,53 @@
+name: macOS Activation
+
+on:
+  pull_request:
+    paths:
+      - main.go
+      - internal/desktop/**
+      - internal/launcher/**
+      - scripts/test-macos-activation.m
+      - scripts/test-macos-client-handoff.m
+      - .github/workflows/macos-activation.yml
+
+permissions:
+  contents: read
+
+jobs:
+  activation:
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Test Go activation routing and child lifecycle on macOS
+        run: go test -mod=vendor -race ./internal/desktop ./internal/launcher
+      - name: Test native activation event wiring
+        run: |
+          clang -fblocks -framework Cocoa scripts/test-macos-activation.m -o "$RUNNER_TEMP/cineko-activation-test"
+          "$RUNNER_TEMP/cineko-activation-test"
+      - name: Check out the paired Client activation implementation
+        uses: actions/checkout@v7
+        with:
+          repository: cineko-org/client
+          ref: 9803a2a98e29dd98bdf369996805ed4db764ef66
+          path: build/activation-client
+          persist-credentials: false
+      - name: Test real activation between separate processes
+        run: |
+          for component in launcher client; do
+            bundle="$RUNNER_TEMP/cineko-$component.app"
+            mkdir -p "$bundle/Contents/MacOS"
+            /usr/libexec/PlistBuddy -c 'Add :CFBundlePackageType string APPL' "$bundle/Contents/Info.plist"
+            /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string io.cineko.test.$component" "$bundle/Contents/Info.plist"
+            /usr/libexec/PlistBuddy -c 'Add :CFBundleExecutable string handoff-test' "$bundle/Contents/Info.plist"
+          done
+          clang -fblocks -framework Cocoa scripts/test-macos-client-handoff.m \
+            internal/desktop/activation_darwin.m build/activation-client/desktop_activation_darwin.m \
+            -o "$RUNNER_TEMP/cineko-launcher.app/Contents/MacOS/handoff-test"
+          cp "$RUNNER_TEMP/cineko-launcher.app/Contents/MacOS/handoff-test" "$RUNNER_TEMP/cineko-client.app/Contents/MacOS/handoff-test"
+          CINEKO_TEST_CLIENT_EXECUTABLE="$RUNNER_TEMP/cineko-client.app/Contents/MacOS/handoff-test" \
+            "$RUNNER_TEMP/cineko-launcher.app/Contents/MacOS/handoff-test"

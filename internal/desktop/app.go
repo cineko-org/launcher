@@ -41,13 +41,18 @@ type State struct {
 }
 
 type Launcher struct {
-	mu      sync.RWMutex
-	ctx     context.Context
-	config  launcher.Config
-	state   State
-	running bool
-	logger  *slog.Logger
-	update  *launcher.LauncherUpdateRequired
+	mu          sync.RWMutex
+	ctx         context.Context
+	config      launcher.Config
+	state       State
+	running     bool
+	logger      *slog.Logger
+	update      *launcher.LauncherUpdateRequired
+	clientPID   int
+	focusClient func(int) error
+	showWindow  func(context.Context)
+	quitClient  func(int) error
+	cancelRun   context.CancelFunc
 }
 
 func New(config launcher.Config, logger *slog.Logger) *Launcher {
@@ -55,9 +60,15 @@ func New(config launcher.Config, logger *slog.Logger) *Launcher {
 		config.Logger = logger
 	}
 	return &Launcher{
-		config: config,
-		state:  State{Revision: 1, Mode: ModeChecking, Message: "Cineko 시작 준비 중", Version: config.Version},
-		logger: logger,
+		config:      config,
+		state:       State{Revision: 1, Mode: ModeChecking, Message: "Cineko 시작 준비 중", Version: config.Version},
+		logger:      logger,
+		focusClient: platformFocusClient,
+		quitClient:  platformQuitClient,
+		showWindow: func(ctx context.Context) {
+			runtime.WindowShow(ctx)
+			runtime.WindowUnminimise(ctx)
+		},
 	}
 }
 
@@ -78,8 +89,16 @@ func (app *Launcher) Retry() error { return app.start() }
 
 func (app *Launcher) Quit() {
 	app.mu.RLock()
-	ctx := app.ctx
+	ctx, pid := app.ctx, app.clientPID
 	app.mu.RUnlock()
+	if pid > 0 && app.quitClient != nil {
+		if err := app.quitClient(pid); err == nil {
+			// The existing child wait path exits the Launcher after Client cleanup.
+			return
+		} else if app.logger != nil {
+			app.logger.Warn("could not request Cineko shutdown", "event", "launcher.client.quit.failed", "pid", pid, "error", err)
+		}
+	}
 	if ctx != nil {
 		runtime.Quit(ctx)
 	}
@@ -145,11 +164,34 @@ func (app *Launcher) requestContext(ctx context.Context, config launcher.Config)
 
 func (app *Launcher) Show() {
 	app.mu.RLock()
-	ctx := app.ctx
+	ctx, pid := app.ctx, app.clientPID
 	app.mu.RUnlock()
+	if ctx != nil && ctx.Err() != nil {
+		return
+	}
+	if pid > 0 && app.focusClient != nil {
+		if err := app.focusClient(pid); err != nil && app.logger != nil {
+			app.logger.Warn("could not activate Cineko window", "event", "launcher.client.activation.failed", "pid", pid, "error", err)
+		}
+		return
+	}
 	if ctx != nil {
-		runtime.WindowShow(ctx)
-		runtime.WindowUnminimise(ctx)
+		app.showWindow(ctx)
+	}
+}
+
+// Ready connects Dock, app-switcher, and reopen events only after Wails has
+// installed its native application handlers.
+func (app *Launcher) Ready(context.Context) { installActivationHandler(app.Show, app.Quit) }
+
+// Shutdown removes native observers before the application exits.
+func (app *Launcher) Shutdown(context.Context) {
+	removeActivationHandler()
+	app.mu.RLock()
+	cancel := app.cancelRun
+	app.mu.RUnlock()
+	if cancel != nil {
+		cancel()
 	}
 }
 
@@ -161,12 +203,14 @@ func (app *Launcher) start() error {
 	}
 	app.running = true
 	config, ctx := app.config, app.ctx
-	app.mu.Unlock()
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	ctx, app.cancelRun = context.WithCancel(ctx)
+	app.mu.Unlock()
 	config.OnProgress = app.progress
 	config.OnClientStarted = app.clientStarted
+	config.OnClientStopped = app.clientStopped
 	go app.execute(ctx, config)
 	return nil
 }
@@ -176,6 +220,9 @@ func (app *Launcher) execute(ctx context.Context, config launcher.Config) {
 	app.mu.Lock()
 	app.running = false
 	app.mu.Unlock()
+	if ctx.Err() != nil {
+		return
+	}
 	if err == nil {
 		runtime.Quit(ctx)
 		return
@@ -224,13 +271,20 @@ func (app *Launcher) progress(progress launcher.Progress) {
 	app.publish(State{Mode: mode, Stage: progress.Stage, Message: progress.Message, Artifact: progress.Artifact, Downloaded: progress.Downloaded, Total: progress.Total, Version: app.config.Version})
 }
 
-func (app *Launcher) clientStarted() {
-	app.mu.RLock()
+func (app *Launcher) clientStarted(pid int) {
+	app.mu.Lock()
+	app.clientPID = pid
 	ctx := app.ctx
-	app.mu.RUnlock()
+	app.mu.Unlock()
 	if ctx != nil {
 		runtime.WindowHide(ctx)
 	}
+}
+
+func (app *Launcher) clientStopped() {
+	app.mu.Lock()
+	app.clientPID = 0
+	app.mu.Unlock()
 }
 
 func (app *Launcher) publish(state State) {

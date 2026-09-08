@@ -1,0 +1,41 @@
+name: Logo Assets
+
+on:
+  pull_request:
+    paths:
+      - build/appicon.svg
+      - build/appicon.png
+      - build/iconfile.png
+      - build/darwin/iconfile.png
+      - internal/desktop/status_icon_darwin.h
+      - scripts/render-icons.swift
+      - .github/workflows/logo-assets.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: macos-15
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Render approved Slate assets
+        run: |
+          swift scripts/render-icons.swift
+          sips -g pixelWidth -g pixelHeight build/icon-output/build/appicon.png
+          shasum -a 256 build/icon-output/build/appicon.png
+      - name: Verify packaged icons match the canonical SVG
+        run: |
+          for asset in build/appicon.png build/iconfile.png build/darwin/iconfile.png internal/desktop/status_icon_darwin.h; do
+            if test -f "$asset"; then
+              cmp "$asset" "build/icon-output/$asset"
+            fi
+          done
+      - uses: actions/upload-artifact@v7
+        with:
+          name: cineko-logo-assets
+          path: build/icon-output/
+          if-no-files-found: error
+          retention-days: 3

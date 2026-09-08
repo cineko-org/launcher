@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Signs a portable macOS app, submits it to Apple, staples the ticket, and emits
-# the only ZIP that downstream release steps are allowed to publish.
+# the verified installer that downstream release steps are allowed to publish.
 
 readonly app_path="${1:-}"
 readonly output_path="${2:-}"
@@ -35,9 +35,11 @@ done
 
 [[ -d "$app_path" ]] || fail "app bundle does not exist"
 [[ "$app_path" == *.app ]] || fail "input must be an app bundle"
-[[ -n "$output_path" && "$output_path" == *.zip ]] || fail "output must be a ZIP path"
+[[ "$output_path" == *.zip || "$output_path" == *.dmg ]] || fail "output must be a ZIP or DMG path"
+[[ "${CI:-}" == true ]] || fail "signing runs only on CI; local build intermediates are not allowed"
+: "${RUNNER_TEMP:?required on the macOS CI runner}"
 
-work_dir="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/cineko-signing.XXXXXX")"
+work_dir="$(mktemp -d "$RUNNER_TEMP/cineko-signing.XXXXXX")"
 keychain_path="$work_dir/cineko-release.keychain-db"
 keychain_password="$(openssl rand -hex 32)"
 p12_path="$work_dir/developer-id.p12"
@@ -145,6 +147,33 @@ verified_app="$verification_dir/$(basename "$app_path")"
 codesign --verify --deep --strict --verbose=2 "$verified_app"
 xcrun stapler validate "$verified_app"
 spctl --assess --type execute --verbose=4 "$verified_app"
-mv -f "$final_zip" "$output_path"
+if [[ "$output_path" == *.dmg ]]; then
+  bash scripts/package-macos-dmg.sh "$app_path" "$output_path"
+  codesign --timestamp --keychain "$keychain_path" --sign "$identity" "$output_path"
+  dmg_notary_result="$work_dir/dmg-notary-result.json"
+  if ! xcrun notarytool submit "$output_path" \
+    --key "$p8_path" \
+    --key-id "$APPLE_NOTARY_KEY_ID" \
+    --issuer "$APPLE_NOTARY_ISSUER_ID" \
+    --wait --timeout "$notary_timeout" \
+    --output-format json >"$dmg_notary_result"; then
+    fail "DMG notarization submission failed"
+  fi
+  if [[ "$(jq -r '.status // empty' "$dmg_notary_result")" != Accepted ]]; then
+    submission_id="$(jq -r '.id // empty' "$dmg_notary_result")"
+    if [[ -n "$submission_id" ]]; then
+      xcrun notarytool log "$submission_id" \
+        --key "$p8_path" --key-id "$APPLE_NOTARY_KEY_ID" \
+        --issuer "$APPLE_NOTARY_ISSUER_ID" >&2 || true
+    fi
+    fail "DMG notarization did not return Accepted"
+  fi
+  xcrun stapler staple "$output_path"
+  xcrun stapler validate "$output_path"
+  codesign --verify --strict --verbose=2 "$output_path"
+  spctl --assess --type open --context context:primary-signature --verbose=4 "$output_path"
+else
+  mv -f "$final_zip" "$output_path"
+fi
 
 printf 'Signed and notarized macOS Launcher: %s\n' "$output_path"

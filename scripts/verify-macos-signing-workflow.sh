@@ -23,6 +23,9 @@ done
 
 grep -Fq 'scripts/sign-notarize-macos-launcher.sh' "$workflow" || fail 'release workflow does not invoke the signer'
 grep -Fq 'NOTARY_TIMEOUT: 10m' "$workflow" || fail 'notarization timeout is not 10 minutes'
+grep -Fq 'darwin-arm64.dmg' "$workflow" || fail 'macOS release must publish the DMG installer'
+grep -Fq 'a2b71d0fda6d0df2a86dc7f67082d4d73e84c59f' "$workflow" || fail 'DMG layout tool must be pinned'
+grep -Fq 'append_release darwin arm64 dmg' scripts/register-launcher-release.sh || fail 'macOS manifest must reference the DMG'
 jq -e '.draft == true and .["force-tag-creation"] == true' "$release_config" >/dev/null || \
   fail 'Release Please must create a tagged draft release'
 
@@ -39,6 +42,10 @@ required_signer_text=(
   'xcrun stapler staple'
   'xcrun stapler validate'
   'spctl --assess'
+  "bash scripts/package-macos-dmg.sh \"\$app_path\" \"\$output_path\""
+  "xcrun notarytool submit \"\$output_path\""
+  "xcrun stapler validate \"\$output_path\""
+  'spctl --assess --type open --context context:primary-signature'
   "ditto -x -k \"\$final_zip\" \"\$verification_dir\""
   "codesign --verify --deep --strict --verbose=2 \"\$verified_app\""
   "xcrun stapler validate \"\$verified_app\""
