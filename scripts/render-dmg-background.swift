@@ -22,8 +22,8 @@ func drawText(_ text: String, y: CGFloat, size: CGFloat, weight: NSFont.Weight, 
 }
 
 drawText("Cineko", y: 340, size: 32, weight: .semibold, shade: 0.12)
-drawText("앱을 Applications 폴더로 드래그하세요", y: 293, size: 17, weight: .regular, shade: 0.38)
-drawText("이미 설치되어 있다면 ‘대치’를 선택하세요.", y: 44, size: 13, weight: .regular, shade: 0.45)
+drawText("Drag Cineko Launcher to Applications", y: 293, size: 17, weight: .regular, shade: 0.38)
+drawText("If Cineko is already installed, choose Replace.", y: 44, size: 13, weight: .regular, shade: 0.45)
 
 NSColor(calibratedWhite: 0.65, alpha: 1).setStroke()
 let arrow = NSBezierPath()

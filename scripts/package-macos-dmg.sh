@@ -34,7 +34,7 @@ mkdir -p "$work_dir/source" "$(dirname "$output_path")" "$mount_path"
 ditto "$app_path" "$work_dir/source/Cineko Launcher.app"
 swift scripts/render-dmg-background.swift "$work_dir/background.png"
 bash "$CREATE_DMG" \
-  --volname 'Cineko 설치' \
+  --volname 'Install Cineko' \
   --volicon "$app_path/Contents/Resources/iconfile.icns" \
   --background "$work_dir/background.png" \
   --window-pos 200 120 --window-size 720 440 \
