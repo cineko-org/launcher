@@ -82,15 +82,20 @@ int cineko_request_client_quit(int pid) {
 
 int cineko_activate_client(int pid) {
     if (pid <= 0) return 0;
-    __block BOOL activated = NO;
+    __block BOOL requested = NO;
     onMainThread(^{
         NSRunningApplication *client = [NSRunningApplication runningApplicationWithProcessIdentifier:pid];
         if (client == nil || client.terminated) return;
         if (@available(macOS 14.0, *)) {
             [NSApp yieldActivationToApplication:client];
         }
-        [client unhide];
-        activated = [client activateWithOptions:NSApplicationActivateAllWindows | NSApplicationActivateIgnoringOtherApps];
+        // On macOS 14+, activation must be cooperative. The child restores
+        // its own window and accepts the activation yielded by this process.
+        NSString *name = [NSString stringWithFormat:@"io.cineko.client.activate.%d", pid];
+        NSString *sender = [NSString stringWithFormat:@"%d", NSProcessInfo.processInfo.processIdentifier];
+        [[NSDistributedNotificationCenter defaultCenter] postNotificationName:name
+            object:sender userInfo:nil deliverImmediately:YES];
+        requested = YES;
     });
-    return activated ? 1 : 0;
+    return requested ? 1 : 0;
 }

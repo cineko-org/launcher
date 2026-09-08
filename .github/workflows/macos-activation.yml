@@ -33,12 +33,21 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: cineko-org/client
-          ref: c1284d5731f8bd61c369c14494071e0ea43daad3
+          ref: 9803a2a98e29dd98bdf369996805ed4db764ef66
           path: build/activation-client
           persist-credentials: false
       - name: Test real activation between separate processes
         run: |
+          for component in launcher client; do
+            bundle="$RUNNER_TEMP/cineko-$component.app"
+            mkdir -p "$bundle/Contents/MacOS"
+            /usr/libexec/PlistBuddy -c 'Add :CFBundlePackageType string APPL' "$bundle/Contents/Info.plist"
+            /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string io.cineko.test.$component" "$bundle/Contents/Info.plist"
+            /usr/libexec/PlistBuddy -c 'Add :CFBundleExecutable string handoff-test' "$bundle/Contents/Info.plist"
+          done
           clang -fblocks -framework Cocoa scripts/test-macos-client-handoff.m \
             internal/desktop/activation_darwin.m build/activation-client/desktop_activation_darwin.m \
-            -o "$RUNNER_TEMP/cineko-handoff-test"
-          "$RUNNER_TEMP/cineko-handoff-test"
+            -o "$RUNNER_TEMP/cineko-launcher.app/Contents/MacOS/handoff-test"
+          cp "$RUNNER_TEMP/cineko-launcher.app/Contents/MacOS/handoff-test" "$RUNNER_TEMP/cineko-client.app/Contents/MacOS/handoff-test"
+          CINEKO_TEST_CLIENT_EXECUTABLE="$RUNNER_TEMP/cineko-client.app/Contents/MacOS/handoff-test" \
+            "$RUNNER_TEMP/cineko-launcher.app/Contents/MacOS/handoff-test"

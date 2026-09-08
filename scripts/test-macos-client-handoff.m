@@ -74,7 +74,9 @@ int main(int argc, const char **argv) {
         [NSApp finishLaunching];
         if (argc > 1) { runClient(); return 0; }
         NSTask *client = [[NSTask alloc] init];
-        client.executableURL = [NSURL fileURLWithPath:[NSString stringWithUTF8String:argv[0]]];
+        const char *clientExecutable = getenv("CINEKO_TEST_CLIENT_EXECUTABLE");
+        if (clientExecutable == NULL) return 2;
+        client.executableURL = [NSURL fileURLWithPath:[NSString stringWithUTF8String:clientExecutable]];
         client.arguments = @[@"--client"];
         NSPipe *input = [NSPipe pipe], *output = [NSPipe pipe];
         client.standardInput = input;
