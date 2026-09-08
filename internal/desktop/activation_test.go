@@ -56,3 +56,20 @@ func TestShowBeforeClientReadyAndOnOtherPlatforms(t *testing.T) {
 		t.Fatalf("launcher show count = %d", shown)
 	}
 }
+
+func TestQuitRequestsOwnedClientCleanupBeforeExitingLauncher(t *testing.T) {
+	app := New(launcher.Config{}, nil)
+	requestedPID := 0
+	app.quitClient = func(pid int) error { requestedPID = pid; return nil }
+	app.clientStarted(1234)
+	app.Quit()
+	if requestedPID != 1234 {
+		t.Fatalf("quit routed to pid %d", requestedPID)
+	}
+	app.clientStopped()
+	requestedPID = 0
+	app.Quit()
+	if requestedPID != 0 {
+		t.Fatal("quit was sent to an exited Client")
+	}
+}

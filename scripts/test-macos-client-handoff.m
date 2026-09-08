@@ -7,9 +7,11 @@ extern int cineko_activate_client(int pid);
 extern int cineko_configure_activation_policy(int foreground);
 extern void cineko_install_activation_observer(void);
 extern void cineko_remove_activation_observer(void);
+extern int cineko_request_client_quit(int pid);
 
 static int clientPID;
 static int activationFailures;
+void cinekoLauncherQuitRequested(void) { cineko_request_client_quit(clientPID); }
 void cinekoLauncherActivated(void) {
     if (clientPID > 0 && !cineko_activate_client(clientPID)) activationFailures++;
 }
@@ -51,7 +53,7 @@ static void runClient(void) {
             char command = line[0];
             dispatch_async(dispatch_get_main_queue(), ^{
                 if (command == 'm') [window miniaturize:nil];
-                if (command == 'h') [window orderOut:nil];
+                if (command == 'h') [NSApp hide:nil];
                 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 500 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
                     printf("%c mini=%d visible=%d active=%d key=%d\n", command,
                         window.miniaturized, window.visible, NSApp.active, window.keyWindow);
@@ -96,7 +98,14 @@ int main(int argc, const char **argv) {
             passed = waitFor(fd, @"q mini=0 visible=1 active=1 key=1") && passed;
         }
         cineko_remove_activation_observer();
-        [client terminate];
+        cinekoLauncherQuitRequested();
+        NSDate *exitDeadline = [NSDate dateWithTimeIntervalSinceNow:5];
+        while (client.running && exitDeadline.timeIntervalSinceNow > 0) pump();
+        if (client.running) {
+            fprintf(stderr, "Client did not honor the status-menu quit request\n");
+            [client terminate];
+            passed = NO;
+        }
         [client waitUntilExit];
         if (!passed || activationFailures) return 1;
         puts("PASS: separate-process handoff restores frontmost key window (normal, minimized, hidden, repeated)");

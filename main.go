@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/cineko-org/launcher/internal/desktop"
@@ -55,12 +56,13 @@ func run() error {
 		Debug:          debugMode,
 	}, logger)
 	return wails.Run(&options.App{
-		Title:            "Cineko Launcher",
-		Width:            720,
-		Height:           560,
-		MinWidth:         360,
-		MinHeight:        520,
-		BackgroundColour: options.NewRGB(10, 11, 14),
+		Title:             "Cineko Launcher",
+		Width:             720,
+		Height:            560,
+		MinWidth:          360,
+		MinHeight:         520,
+		HideWindowOnClose: runtime.GOOS == "darwin",
+		BackgroundColour:  options.NewRGB(10, 11, 14),
 		AssetServer: &assetserver.Options{
 			Assets:     launcher.Assets(),
 			Middleware: telemetry.HTTPServerMiddleware(logger),

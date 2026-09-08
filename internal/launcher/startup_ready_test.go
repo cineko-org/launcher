@@ -18,7 +18,13 @@ func TestStartupReadyHandshakeAcceptsPrivateMatchingMarker(t *testing.T) {
 	processDone := make(chan error, 1)
 	go func() {
 		time.Sleep(10 * time.Millisecond)
-		if err := os.WriteFile(path, []byte(nonce+"\n"), 0o600); err != nil {
+		// The real Client publishes a complete marker with rename. Directly
+		// writing the watched path lets the reader observe an empty file.
+		if err := os.WriteFile(path+".writing", []byte(nonce+"\n"), 0o600); err != nil {
+			processDone <- err
+			return
+		}
+		if err := os.Rename(path+".writing", path); err != nil {
 			processDone <- err
 		}
 	}()
