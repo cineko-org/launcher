@@ -89,6 +89,14 @@ jobs:
             -platform "${{ matrix.wails_platform }}" \
             "${tags[@]}" \
             -ldflags "-s -w -X main.launcherVersion=$VERSION"
+      - name: Check out the pinned DMG layout tool
+        if: matrix.platform == 'darwin-arm64'
+        uses: actions/checkout@v7
+        with:
+          repository: create-dmg/create-dmg
+          ref: a2b71d0fda6d0df2a86dc7f67082d4d73e84c59f # v1.3.0
+          path: build/tools/create-dmg
+          persist-credentials: false
       - name: Sign, notarize, and package macOS Launcher
         if: matrix.platform == 'darwin-arm64'
         shell: bash
@@ -100,10 +108,11 @@ jobs:
           APPLE_NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           NOTARY_TIMEOUT: 10m
+          CREATE_DMG: build/tools/create-dmg/create-dmg
         run: |
           scripts/sign-notarize-macos-launcher.sh \
             'build/bin/Cineko Launcher.app' \
-            "build/release/cineko-launcher-v${VERSION}-darwin-arm64.zip"
+            "build/release/cineko-launcher-v${VERSION}-darwin-arm64.dmg"
       - name: Package Windows Launcher
         if: matrix.platform == 'windows-amd64'
         shell: bash

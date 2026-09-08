@@ -53,7 +53,7 @@ append_release() {
   release_paths+=("$release_path")
 }
 
-append_release darwin arm64 zip 'Cineko Launcher.app/Contents/MacOS/Cineko Launcher'
+append_release darwin arm64 dmg 'Cineko Launcher.app/Contents/MacOS/Cineko Launcher'
 append_release windows amd64 exe 'Cineko Launcher.exe'
 append_release linux amd64 AppImage "cineko-launcher-v${version}-linux-amd64.AppImage"
 

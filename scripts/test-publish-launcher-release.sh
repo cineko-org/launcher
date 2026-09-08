@@ -7,7 +7,7 @@ trap 'rm -rf "$test_root"' EXIT
 readonly assets="$test_root/assets"
 mkdir -p "$assets"
 
-printf 'portable-darwin-arm64\n' >"$assets/cineko-launcher-v1.2.3-darwin-arm64.zip"
+printf 'portable-darwin-arm64\n' >"$assets/cineko-launcher-v1.2.3-darwin-arm64.dmg"
 printf 'portable-windows-amd64\n' >"$assets/cineko-launcher-v1.2.3-windows-amd64.exe"
 printf 'portable-linux-amd64\n' >"$assets/cineko-launcher-v1.2.3-linux-amd64.AppImage"
 
@@ -22,7 +22,7 @@ jq -e '
   reduce .releases[] as $release ({};
     .[$release.platform + "-" + $release.architecture] = $release.launcher.url
   ) == {
-    "darwin-arm64": "https://github.example/releases/download/v1.2.3/cineko-launcher-v1.2.3-darwin-arm64.zip",
+    "darwin-arm64": "https://github.example/releases/download/v1.2.3/cineko-launcher-v1.2.3-darwin-arm64.dmg",
     "windows-amd64": "https://github.example/releases/download/v1.2.3/cineko-launcher-v1.2.3-windows-amd64.exe",
     "linux-amd64": "https://github.example/releases/download/v1.2.3/cineko-launcher-v1.2.3-linux-amd64.AppImage"
   }
