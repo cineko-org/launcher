@@ -1,0 +1,49 @@
+name: macOS DMG Preview
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/dmg-preview.yml
+      - scripts/package-macos-dmg.sh
+      - scripts/render-dmg-background.swift
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check out the pinned DMG layout tool
+        uses: actions/checkout@v7
+        with:
+          repository: create-dmg/create-dmg
+          ref: a2b71d0fda6d0df2a86dc7f67082d4d73e84c59f # v1.3.0
+          path: build/tools/create-dmg
+          persist-credentials: false
+      - name: Download a verified signed Launcher fixture
+        run: |
+          mkdir -p build/fixture
+          curl --fail --silent --show-error --location \
+            https://github.com/cineko-org/launcher/releases/download/v1.4.3/cineko-launcher-v1.4.3-darwin-arm64.zip \
+            --output build/fixture/launcher.zip
+          printf '%s  %s\n' b5de344265b67ec99a790bab80bf42d9560e524cc5fec15d3a9cf3c86dcfbc9c \
+            build/fixture/launcher.zip | shasum -a 256 -c -
+          ditto -x -k build/fixture/launcher.zip build/fixture
+      - name: Build and validate the interactive installer preview
+        env:
+          CREATE_DMG: build/tools/create-dmg/create-dmg
+        run: |
+          bash scripts/package-macos-dmg.sh 'build/fixture/Cineko Launcher.app' \
+            build/release/cineko-launcher-preview.dmg
+          shasum -a 256 build/release/cineko-launcher-preview.dmg
+      - uses: actions/upload-artifact@v7
+        with:
+          name: cineko-dmg-preview
+          path: build/release/cineko-launcher-preview.dmg
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
