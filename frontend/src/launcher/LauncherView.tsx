@@ -41,26 +41,29 @@ function Shell({ state, children }: { state: LauncherState; children: ReactNode 
   );
 }
 
-function Heading({ title, message }: { title: string; message: string }) {
+function Heading({ title, message }: { title: string; message?: string }) {
   return (
     <Stack gap={6} align="flex-start" maw={760}>
       <Title order={1} fz={{ base: 28, sm: 36 }}>{title}</Title>
-      <Text c="dimmed" fz={{ base: 'sm', sm: 'md' }}>{message}</Text>
+      {message && <Text c="dimmed" fz={{ base: 'sm', sm: 'md' }}>{message}</Text>}
     </Stack>
   );
 }
 
 function UpdateView({ state }: { state: LauncherState }) {
-  const percent = state.total ? Math.min(100, Math.round(((state.downloaded ?? 0) / state.total) * 100)) : 100;
-  const launching = state.mode === 'launching';
+  const measurable = state.stage === 'downloading' && (state.total ?? 0) > 0;
+  const percent = measurable ? Math.max(0, Math.min(100, Math.round(((state.downloaded ?? 0) / state.total!) * 100))) : 100;
+  const artifact = artifactLabel[state.artifact ?? ''];
   return (
     <Shell state={state}>
-      <Heading title={launching ? 'Client 시작 중' : '업데이트 중'} message={state.message} />
+      <Heading title={state.message} />
       <Stack gap="sm">
-        <Progress value={percent} animated={state.stage !== 'running'} />
-        <Group justify="space-between"><Text size="sm">{artifactLabel[state.artifact ?? ''] ?? (launching ? 'Cineko Client' : '릴리스 확인')}</Text><Text size="sm" c="dimmed">{state.total ? `${percent}%` : ''}</Text></Group>
+        <Progress value={percent} animated={!measurable} aria-label={state.message} />
+        {(artifact || measurable) && <Group justify="space-between">
+          <Text size="sm" c="dimmed">{artifact && !state.message.includes(artifact) ? artifact : ''}</Text>
+          {measurable && <Text size="sm" c="dimmed">{percent}%</Text>}
+        </Group>}
       </Stack>
-      <Text size="xs" c="dimmed">완료될 때까지 Launcher를 종료하지 마세요.</Text>
     </Shell>
   );
 }
@@ -68,15 +71,14 @@ function UpdateView({ state }: { state: LauncherState }) {
 export function LauncherView(props: LauncherViewProps) {
   const { state } = props;
   if (state.mode === 'checking') {
-    return <Shell state={state}><Heading title="시작 준비 중" message={state.message} /><Progress value={100} animated /></Shell>;
+    return <Shell state={state}><Heading title={state.message} /><Progress value={100} animated aria-label={state.message} /></Shell>;
   }
   if (state.mode === 'updating' || state.mode === 'launching') return <UpdateView state={state} />;
   if (state.mode === 'launcher-update') {
     return (
       <Shell state={state}>
-        <Heading title="Launcher 업데이트 필요" message={state.message} />
-        <Text>현재 v{state.version} · 최신 v{state.latestVersion}</Text>
-        <Text size="sm" c="dimmed">Launcher는 자동으로 교체되지 않습니다. 다운로드한 무설치 Launcher를 직접 실행하세요.</Text>
+        <Heading title="Launcher 업데이트 필요" message="새 버전을 다운로드한 뒤 기존 앱을 교체하세요." />
+        <Text>새 버전 v{state.latestVersion}</Text>
         <Stack gap="sm">
           <Button onClick={props.onDownloadLauncher}>새 Launcher 다운로드</Button>
           <Button variant="default" onClick={props.onQuit}>종료</Button>
@@ -87,11 +89,11 @@ export function LauncherView(props: LauncherViewProps) {
   if (state.mode === 'error') {
     return (
       <Shell state={state}>
-        <Heading title="시작할 수 없음" message="Cineko Client를 준비하지 못했습니다." />
+        <Heading title="시작할 수 없음" />
         <Alert color="red">{state.message}</Alert>
         <SimpleGrid cols={{ base: 1, xs: 2 }}><Button variant="default" onClick={props.onQuit}>종료</Button><Button onClick={props.onRetry}>다시 시도</Button></SimpleGrid>
       </Shell>
     );
   }
-  return <Shell state={state}><Heading title="시작 준비 중" message={state.message} /><Progress value={100} animated /></Shell>;
+  return <Shell state={state}><Heading title={state.message} /><Progress value={100} animated aria-label={state.message} /></Shell>;
 }

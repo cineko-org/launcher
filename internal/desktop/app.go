@@ -41,13 +41,16 @@ type State struct {
 }
 
 type Launcher struct {
-	mu      sync.RWMutex
-	ctx     context.Context
-	config  launcher.Config
-	state   State
-	running bool
-	logger  *slog.Logger
-	update  *launcher.LauncherUpdateRequired
+	mu          sync.RWMutex
+	ctx         context.Context
+	config      launcher.Config
+	state       State
+	running     bool
+	logger      *slog.Logger
+	update      *launcher.LauncherUpdateRequired
+	clientPID   int
+	focusClient func(int) error
+	showWindow  func(context.Context)
 }
 
 func New(config launcher.Config, logger *slog.Logger) *Launcher {
@@ -55,9 +58,14 @@ func New(config launcher.Config, logger *slog.Logger) *Launcher {
 		config.Logger = logger
 	}
 	return &Launcher{
-		config: config,
-		state:  State{Revision: 1, Mode: ModeChecking, Message: "Cineko 시작 준비 중", Version: config.Version},
-		logger: logger,
+		config:      config,
+		state:       State{Revision: 1, Mode: ModeChecking, Message: "Cineko 시작 준비 중", Version: config.Version},
+		logger:      logger,
+		focusClient: platformFocusClient,
+		showWindow: func(ctx context.Context) {
+			runtime.WindowShow(ctx)
+			runtime.WindowUnminimise(ctx)
+		},
 	}
 }
 
@@ -145,13 +153,25 @@ func (app *Launcher) requestContext(ctx context.Context, config launcher.Config)
 
 func (app *Launcher) Show() {
 	app.mu.RLock()
-	ctx := app.ctx
+	ctx, pid := app.ctx, app.clientPID
 	app.mu.RUnlock()
+	if pid > 0 && app.focusClient != nil {
+		if err := app.focusClient(pid); err != nil && app.logger != nil {
+			app.logger.Warn("could not activate Cineko window", "event", "launcher.client.activation.failed", "pid", pid, "error", err)
+		}
+		return
+	}
 	if ctx != nil {
-		runtime.WindowShow(ctx)
-		runtime.WindowUnminimise(ctx)
+		app.showWindow(ctx)
 	}
 }
+
+// Ready connects Dock, app-switcher, and reopen events only after Wails has
+// installed its native application handlers.
+func (app *Launcher) Ready(context.Context) { installActivationHandler(app.Show) }
+
+// Shutdown removes native observers before the application exits.
+func (app *Launcher) Shutdown(context.Context) { removeActivationHandler() }
 
 func (app *Launcher) start() error {
 	app.mu.Lock()
@@ -167,6 +187,7 @@ func (app *Launcher) start() error {
 	}
 	config.OnProgress = app.progress
 	config.OnClientStarted = app.clientStarted
+	config.OnClientStopped = app.clientStopped
 	go app.execute(ctx, config)
 	return nil
 }
@@ -224,13 +245,20 @@ func (app *Launcher) progress(progress launcher.Progress) {
 	app.publish(State{Mode: mode, Stage: progress.Stage, Message: progress.Message, Artifact: progress.Artifact, Downloaded: progress.Downloaded, Total: progress.Total, Version: app.config.Version})
 }
 
-func (app *Launcher) clientStarted() {
-	app.mu.RLock()
+func (app *Launcher) clientStarted(pid int) {
+	app.mu.Lock()
+	app.clientPID = pid
 	ctx := app.ctx
-	app.mu.RUnlock()
+	app.mu.Unlock()
 	if ctx != nil {
 		runtime.WindowHide(ctx)
 	}
+}
+
+func (app *Launcher) clientStopped() {
+	app.mu.Lock()
+	app.clientPID = 0
+	app.mu.Unlock()
 }
 
 func (app *Launcher) publish(state State) {

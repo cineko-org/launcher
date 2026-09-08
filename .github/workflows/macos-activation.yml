@@ -1,0 +1,30 @@
+name: macOS Activation
+
+on:
+  pull_request:
+    paths:
+      - main.go
+      - internal/desktop/**
+      - internal/launcher/**
+      - scripts/test-macos-activation.m
+      - .github/workflows/macos-activation.yml
+
+permissions:
+  contents: read
+
+jobs:
+  activation:
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Test Go activation routing and child lifecycle on macOS
+        run: go test -mod=vendor -race ./internal/desktop ./internal/launcher
+      - name: Test native activation event wiring
+        run: |
+          clang -fblocks -framework Cocoa scripts/test-macos-activation.m -o "$RUNNER_TEMP/cineko-activation-test"
+          "$RUNNER_TEMP/cineko-activation-test"

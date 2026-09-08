@@ -65,8 +65,10 @@ func run() error {
 			Assets:     launcher.Assets(),
 			Middleware: telemetry.HTTPServerMiddleware(logger),
 		},
-		OnStartup: app.Startup,
-		Bind:      []interface{}{app},
+		OnStartup:  app.Startup,
+		OnDomReady: app.Ready,
+		OnShutdown: app.Shutdown,
+		Bind:       []interface{}{app},
 		SingleInstanceLock: &options.SingleInstanceLock{
 			UniqueId:               "io.cineko.launcher",
 			OnSecondInstanceLaunch: func(options.SecondInstanceData) { app.Show() },

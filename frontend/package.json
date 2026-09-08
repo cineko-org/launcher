@@ -10,7 +10,8 @@
   },
   "scripts": {
     "build": "vite build",
-    "check": "npm run lint && npm run typecheck && npm run build && npm run storybook:build",
+    "check": "npm run lint && npm run typecheck && npm run test && npm run build && npm run storybook:build",
+    "test": "vitest run",
     "lint": "oxlint -D correctness -D suspicious -W perf -A react/react-in-jsx-scope --react-plugin src --deny-warnings",
     "storybook": "storybook dev --host 0.0.0.0 --port 6011 --no-open",
     "storybook:build": "storybook build",

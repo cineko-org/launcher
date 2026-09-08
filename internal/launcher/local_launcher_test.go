@@ -38,12 +38,19 @@ printf '%s' "$payload"
 	}
 	var output bytes.Buffer
 	started := 0
+	stopped := 0
+	clientPID := 0
 	err := Run(t.Context(), Config{
 		ClientPath: clientPath, DataDir: dataDir, Version: "1.0.0",
-		Stdout: &output, Stderr: &output, OnClientStarted: func() { started++ },
+		Stdout: &output, Stderr: &output,
+		OnClientStarted: func(pid int) { started++; clientPID = pid },
+		OnClientStopped: func() { stopped++ },
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	if clientPID <= 0 || stopped != 1 {
+		t.Fatalf("client lifecycle: pid=%d stops=%d", clientPID, stopped)
 	}
 	if started != 1 || !strings.Contains(output.String(), `"installationId":"install_`) ||
 		!strings.Contains(output.String(), `"clientVersion":"dev"`) || strings.Contains(output.String(), "launchTicket") {
