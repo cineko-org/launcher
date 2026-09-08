@@ -22,12 +22,13 @@ func TestRunDirectClient(t *testing.T) {
 	dataDir := t.TempDir()
 	clientPath := filepath.Join(t.TempDir(), "cineko-client")
 	script := `#!/bin/sh
+umask 077
 payload=$(cat)
 nonce="$CINEKO_STARTUP_READY_NONCE"
 [ -n "$nonce" ] || exit 23
 mkdir -p "$CINEKO_DATA_DIR/runtime/startup"
-printf '%s\n' "$nonce" > "$CINEKO_DATA_DIR/runtime/startup/$nonce.ready"
-chmod 600 "$CINEKO_DATA_DIR/runtime/startup/$nonce.ready"
+printf '%s\n' "$nonce" > "$CINEKO_DATA_DIR/runtime/startup/$nonce.writing"
+mv "$CINEKO_DATA_DIR/runtime/startup/$nonce.writing" "$CINEKO_DATA_DIR/runtime/startup/$nonce.ready"
 printf '%s' "$payload"
 `
 	if err := os.WriteFile(clientPath, []byte(script), 0o600); err != nil {
