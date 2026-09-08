@@ -7,6 +7,7 @@ on:
       - internal/desktop/**
       - internal/launcher/**
       - scripts/test-macos-activation.m
+      - scripts/test-macos-client-handoff.m
       - .github/workflows/macos-activation.yml
 
 permissions:
@@ -28,3 +29,16 @@ jobs:
         run: |
           clang -fblocks -framework Cocoa scripts/test-macos-activation.m -o "$RUNNER_TEMP/cineko-activation-test"
           "$RUNNER_TEMP/cineko-activation-test"
+      - name: Check out the paired Client activation implementation
+        uses: actions/checkout@v7
+        with:
+          repository: cineko-org/client
+          ref: 3de503a
+          path: build/activation-client
+          persist-credentials: false
+      - name: Test real activation between separate processes
+        run: |
+          clang -fblocks -framework Cocoa scripts/test-macos-client-handoff.m \
+            internal/desktop/activation_darwin.m build/activation-client/desktop_activation_darwin.m \
+            -o "$RUNNER_TEMP/cineko-handoff-test"
+          "$RUNNER_TEMP/cineko-handoff-test"
