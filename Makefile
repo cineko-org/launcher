@@ -20,7 +20,7 @@ install-wails:
 
 desktop: install-wails
 	$(WAILS) build -clean -trimpath -m -nosyncgomod \
-		-ldflags "-s -w -X main.launcherVersion=$(VERSION) -X main.launcherReleaseBaseURL=$${RELEASE_BASE_URL:-}"
+		-ldflags "-s -w -X main.launcherVersion=$(VERSION)"
 
 lint:
 	@test -z "$$(gofmt -l $(GO_FILES))" || (gofmt -l $(GO_FILES) && exit 1)

@@ -45,7 +45,6 @@ jobs:
       contents: read
     env:
       VERSION: ${{ needs.release.outputs.version }}
-      CINEKO_RELEASE_CHANNEL_BASE_URL: https://cdn.dsub.io/cineko/releases/channels/stable
     steps:
       - uses: actions/checkout@v7
         with:
@@ -89,7 +88,7 @@ jobs:
             -clean -trimpath -m -nosyncgomod \
             -platform "${{ matrix.wails_platform }}" \
             "${tags[@]}" \
-            -ldflags "-s -w -X main.launcherVersion=$VERSION -X main.launcherReleaseBaseURL=$CINEKO_RELEASE_CHANNEL_BASE_URL"
+            -ldflags "-s -w -X main.launcherVersion=$VERSION"
       - name: Sign, notarize, and package macOS Launcher
         if: matrix.platform == 'darwin-arm64'
         shell: bash
@@ -138,11 +137,7 @@ jobs:
       contents: write
     env:
       VERSION: ${{ needs.release.outputs.version }}
-      CINEKO_RELEASES_S3_ENDPOINT: ${{ secrets.CINEKO_RELEASES_S3_ENDPOINT }}
-      CINEKO_RELEASES_S3_ACCESS_KEY: ${{ secrets.CINEKO_RELEASES_S3_ACCESS_KEY }}
-      CINEKO_RELEASES_S3_SECRET_KEY: ${{ secrets.CINEKO_RELEASES_S3_SECRET_KEY }}
-      CINEKO_RELEASES_PUBLIC_BASE_URL: https://cdn.dsub.io/cineko/releases
-      CINEKO_LAUNCHER_RELEASE_BASE: https://cdn.dsub.io/cineko/releases/launcher/v${{ needs.release.outputs.version }}
+      CINEKO_LAUNCHER_RELEASE_BASE: https://github.com/${{ github.repository }}/releases/download/${{ needs.release.outputs.tag }}
       CINEKO_RELEASE_PAYLOAD_OUT: release-assets/launcher-release-set.json
     steps:
       - uses: actions/checkout@v7
@@ -168,7 +163,7 @@ jobs:
       - name: Create checksums
         working-directory: release-assets
         run: sha256sum cineko-launcher-* > SHA256SUMS
-      - name: Publish the Launcher update channel
+      - name: Generate the Launcher update manifests
         shell: bash
         run: |
           published_at="$(git show -s --format=%cI HEAD)"
@@ -183,8 +178,10 @@ jobs:
           release-assets/cineko-launcher-*
           release-assets/SHA256SUMS
           release-assets/launcher-release-set.json
+          release-assets/launcher-darwin-arm64.json
+          release-assets/launcher-linux-amd64.json
+          release-assets/launcher-windows-amd64.json
           --repo "${{ github.repository }}"
-          --clobber
       - name: Publish the complete portable release
         env:
           GH_TOKEN: ${{ github.token }}
