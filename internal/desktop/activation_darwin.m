@@ -2,6 +2,7 @@
 
 #import <Cocoa/Cocoa.h>
 #import <pthread.h>
+#import "status_icon_darwin.h"
 
 extern void cinekoLauncherActivated(void);
 extern void cinekoLauncherQuitRequested(void);
@@ -40,11 +41,13 @@ void cineko_install_activation_observer(void) {
             andSelector:@selector(reopen:reply:) forEventClass:kCoreEventClass andEventID:kAEReopenApplication];
         statusItem = [[[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength] retain];
         statusItem.button.toolTip = @"Cineko";
-        if (@available(macOS 11.0, *)) {
-            NSImage *icon = [NSImage imageWithSystemSymbolName:@"ticket" accessibilityDescription:@"Cineko"];
-            icon.template = YES;
-            statusItem.button.image = icon;
-        }
+        NSData *iconData = [[NSData alloc] initWithBase64EncodedString:[NSString stringWithUTF8String:cinekoStatusIconBase64] options:0];
+        NSImage *icon = [[NSImage alloc] initWithData:iconData];
+        [iconData release];
+        icon.size = NSMakeSize(18, 18);
+        icon.template = YES;
+        statusItem.button.image = icon;
+        [icon release];
         if (statusItem.button.image == nil) statusItem.button.title = @"Cineko";
         NSMenu *menu = [[NSMenu alloc] initWithTitle:@"Cineko"];
         NSMenuItem *show = [menu addItemWithTitle:@"Cineko 열기" action:@selector(showClient:) keyEquivalent:@""];

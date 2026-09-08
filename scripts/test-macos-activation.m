@@ -17,6 +17,8 @@ int main(void) {
         [activationObserver reopen:nil reply:nil];
         NSCAssert(activationCount == 2, @"reopen was not forwarded");
         NSCAssert(statusItem != nil && statusItem.menu.numberOfItems == 3, @"missing status menu");
+        NSCAssert(statusItem.button.image != nil && statusItem.button.image.template, @"approved Slate template icon did not load");
+        NSCAssert(statusItem.button.image.size.width == 18, @"status icon is not menu-bar sized");
         [statusItem.menu performActionForItemAtIndex:0];
         NSCAssert(activationCount == 3, @"status menu did not open Client");
         [statusItem.menu performActionForItemAtIndex:2];
