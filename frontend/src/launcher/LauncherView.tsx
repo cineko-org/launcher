@@ -51,16 +51,18 @@ function Heading({ title, message }: { title: string; message?: string }) {
 }
 
 function UpdateView({ state }: { state: LauncherState }) {
-  const measurable = state.stage === 'downloading' && (state.total ?? 0) > 0;
-  const percent = measurable ? Math.max(0, Math.min(100, Math.round(((state.downloaded ?? 0) / state.total!) * 100))) : 100;
+  const total = state.total ?? 0;
+  const measurable = state.stage === 'downloading' && total > 0;
+  const percent = measurable ? Math.max(0, Math.min(100, Math.round(((state.downloaded ?? 0) / total) * 100))) : 100;
   const artifact = artifactLabel[state.artifact ?? ''];
+  const detail = artifact && !state.message.includes(artifact) ? artifact : '';
   return (
     <Shell state={state}>
       <Heading title={state.message} />
       <Stack gap="sm">
         <Progress value={percent} animated={!measurable} aria-label={state.message} />
-        {(artifact || measurable) && <Group justify="space-between">
-          <Text size="sm" c="dimmed">{artifact && !state.message.includes(artifact) ? artifact : ''}</Text>
+        {(detail || measurable) && <Group justify="space-between">
+          <Text size="sm" c="dimmed">{detail}</Text>
           {measurable && <Text size="sm" c="dimmed">{percent}%</Text>}
         </Group>}
       </Stack>
