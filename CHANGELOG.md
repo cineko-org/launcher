@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.3](https://github.com/cineko-org/launcher/compare/v1.4.2...v1.4.3) (2026-09-08)
+
+
+### Bug Fixes
+
+* discover Client and Launcher updates from GitHub Releases ([#37](https://github.com/cineko-org/launcher/issues/37)) ([67720e9](https://github.com/cineko-org/launcher/commit/67720e9517b3d8699623e8743807c663b2c68492))
+
 ## [1.4.2](https://github.com/cineko-org/launcher/compare/v1.4.1...v1.4.2) (2026-08-31)
 
 
