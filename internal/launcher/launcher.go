@@ -182,7 +182,14 @@ func fallbackInstalled(config Config, manifestPath string, remoteErr error) (ins
 
 func fetchReleaseProto(ctx context.Context, config Config, name string, destination proto.Message) error {
 	ctx = telemetry.WithLogger(ctx, config.Logger)
-	endpoint := strings.TrimRight(config.ReleaseBaseURL, "/") + "/" + runtime.GOOS + "-" + runtime.GOARCH + "/" + name
+	repository := "client"
+	if name == "launcher.json" {
+		repository = "launcher"
+	} else if name != "runtime.json" {
+		return fmt.Errorf("unsupported release manifest %q", name)
+	}
+	asset := strings.TrimSuffix(name, ".json") + "-" + runtime.GOOS + "-" + runtime.GOARCH + ".json"
+	endpoint := strings.TrimRight(config.ReleaseBaseURL, "/") + "/" + repository + "/releases/latest/download/" + asset
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return err

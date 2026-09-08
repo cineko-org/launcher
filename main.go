@@ -21,7 +21,7 @@ import (
 
 var (
 	launcherVersion        = "0.0.0-dev"
-	launcherReleaseBaseURL string
+	launcherReleaseBaseURL = "https://github.com/cineko-org"
 )
 
 func main() {

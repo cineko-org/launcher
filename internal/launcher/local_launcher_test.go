@@ -55,6 +55,59 @@ printf '%s' "$payload"
 	}
 }
 
+func TestFetchRuntimeManifestFollowsGitHubAssetRedirect(t *testing.T) {
+	requestedPaths := []string{}
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		requestedPaths = append(requestedPaths, request.URL.Path)
+		if request.Header.Get("Authorization") != "" {
+			t.Error("public release lookup must not need an authentication token")
+		}
+		if strings.Contains(request.URL.Path, "/latest/download/") {
+			http.Redirect(writer, request, "/assets/runtime.json", http.StatusFound)
+			return
+		}
+		_, _ = writer.Write([]byte(`{"client":{"version":"2.8.5"}}`))
+	}))
+	t.Cleanup(server.Close)
+	config := Config{ReleaseBaseURL: server.URL + "/cineko-org", HTTPClient: server.Client()}
+	output := &releasepb.RuntimeRelease{}
+	if err := fetchReleaseProto(t.Context(), config, "runtime.json", output); err != nil {
+		t.Fatal(err)
+	}
+	want := "/cineko-org/client/releases/latest/download/runtime-" + runtime.GOOS + "-" + runtime.GOARCH + ".json"
+	if len(requestedPaths) != 2 || requestedPaths[0] != want || requestedPaths[1] != "/assets/runtime.json" || output.GetClient().GetVersion() != "2.8.5" {
+		t.Fatalf("unexpected manifest requests or version: %v, %v", requestedPaths, output)
+	}
+}
+
+func TestFetchReleaseManifestFailures(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		status int
+		body   string
+	}{
+		{name: "missing", status: http.StatusNotFound, body: "Not found"},
+		{name: "invalid JSON", status: http.StatusOK, body: "<html>error</html>"},
+		{name: "empty", status: http.StatusOK},
+		{name: "too large", status: http.StatusOK, body: strings.Repeat(" ", maximumReleaseManifestBytes+1)},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+				writer.WriteHeader(test.status)
+				_, _ = writer.Write([]byte(test.body))
+			}))
+			t.Cleanup(server.Close)
+			config := Config{ReleaseBaseURL: server.URL, HTTPClient: server.Client()}
+			if err := fetchReleaseProto(t.Context(), config, "runtime.json", &releasepb.RuntimeRelease{}); err == nil {
+				t.Fatal("invalid release response accepted")
+			}
+		})
+	}
+	if err := fetchReleaseProto(t.Context(), Config{}, "unknown.json", &releasepb.RuntimeRelease{}); err == nil {
+		t.Fatal("unsupported manifest accepted")
+	}
+}
+
 func TestFetchReleaseProtoUsesPublicPlatformPathAndLogs(t *testing.T) {
 	channel, platform, architecture, version := "stable", runtime.GOOS, runtime.GOARCH, "1.2.3"
 	release := releasepb.LauncherRelease_builder{
@@ -77,7 +130,7 @@ func TestFetchReleaseProtoUsesPublicPlatformPathAndLogs(t *testing.T) {
 	if err := fetchReleaseProto(t.Context(), config, "launcher.json", output); err != nil {
 		t.Fatal(err)
 	}
-	wantPath := "/releases/" + runtime.GOOS + "-" + runtime.GOARCH + "/launcher.json"
+	wantPath := "/releases/launcher/releases/latest/download/launcher-" + runtime.GOOS + "-" + runtime.GOARCH + ".json"
 	if requestedPath != wantPath || output.GetVersion() != version {
 		t.Fatalf("request path/version = %q/%q, want %q/%q", requestedPath, output.GetVersion(), wantPath, version)
 	}
