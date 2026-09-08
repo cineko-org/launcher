@@ -42,9 +42,9 @@ required_signer_text=(
   'xcrun stapler staple'
   'xcrun stapler validate'
   'spctl --assess'
-  'bash scripts/package-macos-dmg.sh "$app_path" "$output_path"'
-  'xcrun notarytool submit "$output_path"'
-  'xcrun stapler validate "$output_path"'
+  "bash scripts/package-macos-dmg.sh \"\$app_path\" \"\$output_path\""
+  "xcrun notarytool submit \"\$output_path\""
+  "xcrun stapler validate \"\$output_path\""
   'spctl --assess --type open --context context:primary-signature'
   "ditto -x -k \"\$final_zip\" \"\$verification_dir\""
   "codesign --verify --deep --strict --verbose=2 \"\$verified_app\""
