@@ -9,7 +9,7 @@ require (
 	github.com/cineko-org/contracts/v3 v3.7.0
 	github.com/cineko-org/probe/v2 v2.8.2
 	github.com/wailsapp/wails/v2 v2.15.0
-	golang.org/x/mod v0.40.0
+	golang.org/x/mod v0.41.0
 	golang.org/x/sys v0.47.0
 	google.golang.org/protobuf v1.36.12
 )
