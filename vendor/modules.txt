@@ -31,7 +31,7 @@ github.com/cineko-org/contracts/v3/gen/go/cineko/common
 github.com/cineko-org/contracts/v3/gen/go/cineko/observation
 github.com/cineko-org/contracts/v3/gen/go/cineko/release
 github.com/cineko-org/contracts/v3/gen/go/cineko/seatmap
-# github.com/cineko-org/probe/v2 v2.8.2
+# github.com/cineko-org/probe/v2 v2.8.3
 ## explicit; go 1.27
 github.com/cineko-org/probe/v2/networkcapture
 # github.com/go-ole/go-ole v1.3.0
