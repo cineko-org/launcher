@@ -10,7 +10,7 @@ require (
 	github.com/cineko-org/probe/v2 v2.8.2
 	github.com/wailsapp/wails/v2 v2.15.0
 	golang.org/x/mod v0.40.0
-	golang.org/x/sys v0.47.0
+	golang.org/x/sys v0.48.0
 	google.golang.org/protobuf v1.36.12
 )
 
