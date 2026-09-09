@@ -14,8 +14,8 @@ github.com/brianvoe/gofakeit/v6 v6.28.0 h1:Xib46XXuQfmlLS2EXRuJpqcw8St6qSZz75OUo
 github.com/brianvoe/gofakeit/v6 v6.28.0/go.mod h1:Xj58BMSnFqcn/fAQeSK+/PLtC5kSb7FJIq4JyGa8vEs=
 github.com/cineko-org/contracts/v3 v3.7.0 h1:ikGwAvedmFFXWPV8MWttz+wsIRpWcPAoFLkWdJppfJ4=
 github.com/cineko-org/contracts/v3 v3.7.0/go.mod h1:IYNlT5dR+P6+vJxc3sdHD+7qLKMDZCs8DuXDwxhi1ZA=
-github.com/cineko-org/probe/v2 v2.8.2 h1:Y+ihwSptGda6VXWiVy8QS6UDO8zRzRM43iDPZcwWTHo=
-github.com/cineko-org/probe/v2 v2.8.2/go.mod h1:6JwUh4Sg62W/8VWbgU15TFB3WRH6zEWXWqQZ/SrtfHI=
+github.com/cineko-org/probe/v2 v2.8.3 h1:J4IkWz1XmKKavlorMZ3xoRUBgBNm23chHobKLkDI+1M=
+github.com/cineko-org/probe/v2 v2.8.3/go.mod h1:6JwUh4Sg62W/8VWbgU15TFB3WRH6zEWXWqQZ/SrtfHI=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/go-ole/go-ole v1.3.0 h1:Dt6ye7+vXGIKZ7Xtk4s6/xVdGDQynvom7xCFEdWr6uE=
 github.com/go-ole/go-ole v1.3.0/go.mod h1:5LS6F96DhAwUc7C+1HLexzMXY1xGRSryjyPPKW6zv78=
